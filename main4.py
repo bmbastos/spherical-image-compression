@@ -96,12 +96,34 @@ def np2b(q_matrix:matrix) -> matrix:
 
 path = "images/"
 files = os.listdir(path)
-avg_psnr = []
-avg_ssim = []
-avg_bpp = []
+avg_psnr_dct = []
+avg_psnr_rdct_op1 = []
+avg_psnr_rdct_op2 = []
+avg_psnr_brahime = []
+avg_ssim_dct = []
+avg_ssim_rdct_op1 = []
+avg_ssim_rdct_op2 = []
+avg_ssim_brahime = []
+avg_bpp_dct = []
+avg_bpp_rdct_op1 = []
+avg_bpp_rdct_op2 = []
+avg_bpp_brahime = []
 vec_qf = list(range(5, 96, 5))
 qt_images = len(files)
 pause()
+processed_images = 0
+psnr_dct = []
+ssim_dct = []
+bpp_dct = []
+psnr_rdct_op1 = []
+ssim_rdct_op1 = []
+bpp_rdct_op1 = []        
+psnr_rdct_op2 = []
+ssim_rdct_op2 = []
+bpp_rdct_op2 = []
+psnr_brahime = []
+ssim_brahime = []
+bpp_brahime = []
 
 for file in files:
     image = 0
@@ -110,6 +132,8 @@ for file in files:
         image = io.imread(full_path)
         if not func.is_gray_scale(image):
             image = color.rgb2gray(image)
+        
+        print(file)
 
         vec_dct_psnr = []
         vec_dct_ssim = []
@@ -124,18 +148,6 @@ for file in files:
         vec_rdct_brahime_ssim = []
         vec_rdct_brahime_bpp = []
 
-        psnr_dct = []
-        ssim_dct = []
-        bpp_dct = []
-        psnr_rdct_op1 = []
-        ssim_rdct_op1 = []
-        bpp_rdct_op1 = []        
-        psnr_rdct_op2 = []
-        ssim_rdct_op2 = []
-        bpp_rdct_op2 = []
-        psnr_brahime = []
-        ssim_brahime = []
-        bpp_brahime = []
 
         # Aplicação da transformada simples e aproximada, repectivamente
         image_dct = func.apply_direct_transform(T, image, 8)
@@ -178,6 +190,7 @@ for file in files:
             vec_rdct_brahime_psnr.append(metrics.peak_signal_noise_ratio(image, compressed_image_rdct_brahime, data_range=255))
             vec_rdct_brahime_ssim.append(metrics.structural_similarity(image, compressed_image_rdct_brahime, data_range=255))
             vec_rdct_brahime_bpp.append(func.calculate_number_of_bytes_of_image_per_pixels(quantized_image_rdct_brahime))
+        
         psnr_dct.append(vec_dct_psnr)
         psnr_rdct_op1.append(vec_rdct_oliveira_op1_psnr)
         psnr_rdct_op2.append(vec_rdct_oliveira_op2_psnr)
@@ -190,8 +203,53 @@ for file in files:
         bpp_rdct_op1.append(vec_rdct_oliveira_op1_psnr)
         bpp_rdct_op2.append(vec_rdct_oliveira_op2_psnr)
         bpp_brahime.append(vec_rdct_brahime_psnr)
+    
+    processed_images += 1
+    ratio = round(processed_images / qt_images * 100, 2)
+    os.system('clear')
+    print(f"Processed images ratio: {ratio}%")
 
-
+pause()
+for index_of_qf in len(vec_qf):
+    dct_psnr = 0
+    rdct_op1_psnr = 0
+    rdct_op2_psnr = 0
+    brahime_psnr = 0
+    dct_ssim = 0
+    rdct_op1_ssim = 0
+    rdct_op2_ssim = 0
+    brahime_ssim = 0
+    dct_bpp = 0
+    rdct_op1_bpp = 0
+    rdct_op2_bpp = 0
+    brahime_bpp = 0
+    for index_of_file in qt_images:
+        dct_psnr += psnr_dct[index_of_file][index_of_qf]
+        rdct_op1_psnr += psnr_rdct_op1[index_of_file][index_of_qf]
+        rdct_op2_psnr += psnr_rdct_op2[index_of_file][index_of_qf]
+        brahime_psnr += psnr_brahime[index_of_file][index_of_qf]
+        dct_ssim += ssim_dct[index_of_file][index_of_qf]
+        rdct_op1_ssim += ssim_rdct_op1[index_of_file][index_of_qf]
+        rdct_op2_ssim += ssim_rdct_op2[index_of_file][index_of_qf]
+        brahime_ssim += ssim_brahime[index_of_file][index_of_qf]
+        dct_bpp += bpp_dct[index_of_file][index_of_qf]
+        rdct_op1_bpp += bpp_rdct_op1[index_of_file][index_of_qf]
+        rdct_op2_bpp += bpp_rdct_op2[index_of_file][index_of_qf]
+        brahime_bpp += bpp_brahime[index_of_file][index_of_qf]
+    avg_psnr_dct.append(dct_psnr/qt_images)
+    avg_psnr_rdct_op1.append(rdct_op1_psnr/qt_images)
+    avg_psnr_rdct_op2.append(rdct_op2_psnr/qt_images)
+    avg_psnr_brahime.append(brahime_psnr/qt_images)
+    avg_ssim_dct.append(dct_ssim/qt_images)
+    avg_ssim_rdct_op1.append(rdct_op1_ssim/qt_images)
+    avg_ssim_rdct_op2.append(rdct_op2_ssim/qt_images)
+    avg_ssim_brahime.append(brahime_ssim/qt_images)
+    avg_bpp_dct.append(dct_bpp/qt_images)
+    avg_bpp_rdct_op1.append(rdct_op1_bpp/qt_images)
+    avg_bpp_rdct_op2.append(rdct_op2_bpp/qt_images)
+    avg_bpp_brahime.append(brahime_bpp/qt_images)
+pause()
+"""
 # Plotagem dos gráficos
 fig, axs = plt.subplots(2, 2, label="Oliveira's proposal")
 axs[0, 0].grid(True)
@@ -236,6 +294,7 @@ axs[1, 1].legend()
 
 fig.tight_layout()
 plt.show()
+"""
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------
 #Anotações 

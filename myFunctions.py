@@ -1,8 +1,7 @@
 import os
 import time as t
 import numpy as np
-from skimage import io
-from skimage import metrics
+from skimage import io, metrics
 
 
 # =============================================================================================================================================================================================
@@ -65,8 +64,8 @@ def calculate_values_of_graphics(image:np.ndarray, transformationMatrix:np.ndarr
 	vec_bpp = []
 	vec_qf = list(range(5, 96, 5))
 	for qf in vec_qf:
-		vec_qf.append(qf)
-		q = calculate_matrix_of_qf_quantization(qf)
+		print(qf)
+		q = calculate_matrix_of_qf_quantization(qf, qf_matrix)
 		b = apply_direct_transform(transformationMatrix, image, k)
 		b_linha = apply_quantization(q, b, k)
 		a_linha = apply_inverse_transform(transformationMatrix, b_linha, k)

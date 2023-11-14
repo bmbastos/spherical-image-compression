@@ -37,7 +37,7 @@ transformed_image_by_dct = func.apply_direct_transform(func.c_matrix, image, 8)
 transformed_image_by_rdct = func.apply_direct_transform(func.c_ortho_matrix, image, 8)
 
 for qf in qf_values:
-    q = func.calculate_matrix_of_qf_quantization(qf)
+    q = func.calculate_matrix_of_qf_quantization(qf, func.qf_matrix)
     q_binary = func.np2(q)
 
     image_quantized_by_q_and_transformed_by_dct = func.apply_quantization(q, transformed_image_by_dct, 8)
