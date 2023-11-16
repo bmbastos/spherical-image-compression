@@ -96,6 +96,7 @@ def np2b(q_matrix:matrix) -> matrix:
 
 path = "images/"
 files = os.listdir(path)
+qt_images = 20
 avg_psnr_dct = []
 avg_psnr_rdct_op1 = []
 avg_psnr_rdct_op2 = []
@@ -109,9 +110,7 @@ avg_bpp_rdct_op1 = []
 avg_bpp_rdct_op2 = []
 avg_bpp_brahime = []
 vec_qf = list(range(5, 96, 5))
-qt_images = len(files)
 pause()
-processed_images = 0
 psnr_dct = []
 ssim_dct = []
 bpp_dct = []
@@ -125,8 +124,9 @@ psnr_brahime = []
 ssim_brahime = []
 bpp_brahime = []
 
-for file in files:
-    image = 0
+count_images = 0
+while count_images < qt_images:
+    file = files[count_images]
     if file.endswith('.tiff'):
         full_path = os.path.join(path, file)
         image = io.imread(full_path)
@@ -195,22 +195,22 @@ for file in files:
         psnr_rdct_op1.append(vec_rdct_oliveira_op1_psnr)
         psnr_rdct_op2.append(vec_rdct_oliveira_op2_psnr)
         psnr_brahime.append(vec_rdct_brahime_psnr)
-        ssim_dct.append(vec_dct_psnr)
-        ssim_rdct_op1.append(vec_rdct_oliveira_op1_psnr)
-        ssim_rdct_op2.append(vec_rdct_oliveira_op2_psnr)
-        ssim_brahime.append(vec_rdct_brahime_psnr)
-        bpp_dct.append(vec_dct_psnr)
-        bpp_rdct_op1.append(vec_rdct_oliveira_op1_psnr)
-        bpp_rdct_op2.append(vec_rdct_oliveira_op2_psnr)
-        bpp_brahime.append(vec_rdct_brahime_psnr)
-    
-    processed_images += 1
-    ratio = round(processed_images / qt_images * 100, 2)
+        ssim_dct.append(vec_dct_ssim)
+        ssim_rdct_op1.append(vec_rdct_oliveira_op1_ssim)
+        ssim_rdct_op2.append(vec_rdct_oliveira_op2_ssim)
+        ssim_brahime.append(vec_rdct_brahime_ssim)
+        bpp_dct.append(vec_dct_bpp)
+        bpp_rdct_op1.append(vec_rdct_oliveira_op1_bpp)
+        bpp_rdct_op2.append(vec_rdct_oliveira_op2_bpp)
+        bpp_brahime.append(vec_rdct_brahime_bpp)
+        
+    count_images += 1
+    ratio = round(count_images / qt_images * 100, 2)
     os.system('clear')
     print(f"Processed images ratio: {ratio}%")
 
 pause()
-for index_of_qf in len(vec_qf):
+for index_of_qf in range(len(vec_qf)):
     dct_psnr = 0
     rdct_op1_psnr = 0
     rdct_op2_psnr = 0
@@ -223,7 +223,7 @@ for index_of_qf in len(vec_qf):
     rdct_op1_bpp = 0
     rdct_op2_bpp = 0
     brahime_bpp = 0
-    for index_of_file in qt_images:
+    for index_of_file in range(qt_images):
         dct_psnr += psnr_dct[index_of_file][index_of_qf]
         rdct_op1_psnr += psnr_rdct_op1[index_of_file][index_of_qf]
         rdct_op2_psnr += psnr_rdct_op2[index_of_file][index_of_qf]
@@ -248,53 +248,51 @@ for index_of_qf in len(vec_qf):
     avg_bpp_rdct_op1.append(rdct_op1_bpp/qt_images)
     avg_bpp_rdct_op2.append(rdct_op2_bpp/qt_images)
     avg_bpp_brahime.append(brahime_bpp/qt_images)
-pause()
-"""
+
 # Plotagem dos gráficos
-fig, axs = plt.subplots(2, 2, label="Oliveira's proposal")
+fig, axs = plt.subplots(2, 2, label="Averages of 20 images")
 axs[0, 0].grid(True)
 axs[0, 0].set_title("QF X PSNR")
-axs[0, 0].plot(vec_qf, vec_dct_psnr, color='red', label="standard-dct")
-axs[0, 0].plot(vec_qf, vec_rdct_oliveira_op1_psnr, color='green', label="rdct-option1", ls='dashed')
-axs[0, 0].plot(vec_qf, vec_rdct_oliveira_op2_psnr, color='green', label="rdct-option2")
-axs[0, 0].plot(vec_qf, vec_rdct_brahime_psnr, color='blue', label="Brahime-propose")
+axs[0, 0].plot(vec_qf, avg_psnr_dct, color='red', label="standard-dct")
+axs[0, 0].plot(vec_qf, avg_psnr_rdct_op1, color='green', label="rdct-option1", ls='dashed')
+axs[0, 0].plot(vec_qf, avg_psnr_rdct_op2, color='green', label="rdct-option2")
+axs[0, 0].plot(vec_qf, avg_psnr_brahime, color='blue', label="Brahime-propose")
 axs[0, 0].set_xlabel("QF values")
 axs[0, 0].set_ylabel("PSNR values")
 axs[0, 0].legend()
 
 axs[0, 1].grid(True)
 axs[0, 1].set_title("QF X SSIM")
-axs[0, 1].plot(vec_qf, vec_dct_ssim, color='red', label="standard-dct")
-axs[0, 1].plot(vec_qf, vec_rdct_oliveira_op1_ssim, color='green', label="rdct-option1", ls='dashed')
-axs[0, 1].plot(vec_qf, vec_rdct_oliveira_op2_ssim, color='green', label="rdct-option2")
-axs[0, 1].plot(vec_qf, vec_rdct_brahime_ssim, color='blue', label="Brahime-propose")
+axs[0, 1].plot(vec_qf, avg_ssim_dct, color='red', label="standard-dct")
+axs[0, 1].plot(vec_qf, avg_ssim_rdct_op1, color='green', label="rdct-option1", ls='dashed')
+axs[0, 1].plot(vec_qf, avg_ssim_rdct_op2, color='green', label="rdct-option2")
+axs[0, 1].plot(vec_qf, avg_ssim_brahime, color='blue', label="Brahime-propose")
 axs[0, 1].set_xlabel("QF values")
 axs[0, 1].set_ylabel("SSIM values")
 axs[0, 1].legend()
 
 axs[1, 0].grid(True)
 axs[1, 0].set_title("RD Curve (BPP X PSNR)")
-axs[1, 0].plot(vec_dct_bpp, vec_dct_psnr, color='red', label="standard-dct")
-axs[1, 0].plot(vec_rdct_oliveira_op1_bpp, vec_rdct_oliveira_op1_psnr, color='green', label="rdct-option1", ls='dashed')
-axs[1, 0].plot(vec_rdct_oliveira_op2_bpp, vec_rdct_oliveira_op2_psnr, color='green', label="rdct-option2")
-axs[1, 0].plot(vec_rdct_brahime_bpp, vec_rdct_brahime_psnr, color='blue', label="Brahime-propose")
+axs[1, 0].plot(avg_bpp_dct, avg_psnr_dct, color='red', label="standard-dct")
+axs[1, 0].plot(avg_bpp_rdct_op1, avg_psnr_rdct_op1, color='green', label="rdct-option1", ls='dashed')
+axs[1, 0].plot(avg_bpp_rdct_op2, avg_psnr_rdct_op2, color='green', label="rdct-option2")
+axs[1, 0].plot(avg_bpp_brahime, avg_psnr_brahime, color='blue', label="Brahime-propose")
 axs[1, 0].set_xlabel("BPP")
 axs[1, 0].set_ylabel("PSNR values")
 axs[1, 0].legend()
 
 axs[1, 1].grid(True)
 axs[1, 1].set_title("RD CUrve (BPP X SSIM)")
-axs[1, 1].plot(vec_dct_bpp, vec_dct_ssim, color='red', label="standard-dct")
-axs[1, 1].plot(vec_rdct_oliveira_op1_bpp, vec_rdct_oliveira_op1_ssim, color='green', label="rdct-option1", ls='dashed')
-axs[1, 1].plot(vec_rdct_oliveira_op2_bpp, vec_rdct_oliveira_op2_ssim, color='green', label="rdct-option2")
-axs[1, 1].plot(vec_rdct_brahime_bpp, vec_rdct_brahime_ssim, color='blue', label="Brahime-propose")
+axs[1, 1].plot(avg_bpp_dct, avg_ssim_dct, color='red', label="standard-dct")
+axs[1, 1].plot(avg_bpp_rdct_op1, avg_ssim_rdct_op1, color='green', label="rdct-option1", ls='dashed')
+axs[1, 1].plot(avg_bpp_rdct_op2, avg_ssim_rdct_op2, color='green', label="rdct-option2")
+axs[1, 1].plot(avg_bpp_brahime, avg_ssim_brahime, color='blue', label="Brahime-propose")
 axs[1, 1].set_xlabel("BPP")
 axs[1, 1].set_ylabel("SSIM values")
 axs[1, 1].legend()
 
 fig.tight_layout()
 plt.show()
-"""
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------
 #Anotações 
@@ -318,3 +316,5 @@ A_til2 = dot(dot(C_0.T, B_til2), C_0)
 
 r = sum(A_til - A_til2)
 r = "{:.10f}".format(r)
+
+pause()
