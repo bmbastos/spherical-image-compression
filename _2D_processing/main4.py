@@ -8,7 +8,12 @@ import os
 """
 Objetivo: Implementar a proposta do artigo do Oliveira
  e comparar os sinais de cada uma das aplicações
+
 Feature: Mesclar proposta do(a) Brahime
+
+Observação: A Brahime apresenta ser pior inicialmente com QF baixo, 
+porém acaba tendo um melhor desempenho ao aumentar o fator de quanlidade 
+dadas a smatrizes escolhidas (de transformação e de quantização)
 """
 
 # -----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -96,7 +101,7 @@ def np2b(q_matrix:matrix) -> matrix:
 
 path = "images/"
 files = os.listdir(path)
-qt_images = 20
+qt_images = 68
 avg_psnr_dct = []
 avg_psnr_rdct_op1 = []
 avg_psnr_rdct_op2 = []
