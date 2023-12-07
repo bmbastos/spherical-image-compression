@@ -64,7 +64,11 @@ def calculate_values_of_graphics(image:np.ndarray, transformationMatrix:np.ndarr
 	vec_bpp = []
 	vec_qf = list(range(5, 96, 5))
 	for qf in vec_qf:
+<<<<<<< HEAD:_2D_processing/myFunctions.py
 		print(qf)
+=======
+		vec_qf.append(qf)
+>>>>>>> 0e5d7d2 (Delete testing images):myFunctions.py
 		q = calculate_matrix_of_qf_quantization(qf, qf_matrix)
 		b = apply_direct_transform(transformationMatrix, image, k)
 		b_linha = apply_quantization(q, b, k)
