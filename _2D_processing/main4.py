@@ -49,7 +49,7 @@ TB = array([[1, 1, 1, 1, 1, 1, 1, 1],
             [1, -1, -1, 1, 1, -1, -1, 1],
             [1, -1, 0, 0, 0, 0, 1, -1],
             [0, -1, 1, 0, 0, 1, -1, 0],
-            [0, 0, 0, -1, 1, 0, 0, 0]])
+            [0, 0, 0, -1, 1, 0, 0, 0]], dtype=float)
 
 # Matriz de quantização QF
 Q = array([[16, 11, 10, 16, 24, 40, 51, 61],
@@ -98,6 +98,24 @@ def np2b(q_matrix:matrix) -> matrix:
             
 # -----------------------------------------------------------------------------------------------------------------------------------------------------
 # Implementação
+
+print()
+print()
+print()
+print()
+for row in TB:
+	print()
+	print("                       ", end=' ')
+	for col in row:
+		print(func.np.round(col, 6), end=' ')
+	print()
+print()
+print()
+print()
+print()
+print()
+print()
+pause()
 
 path = "images/"
 files = os.listdir(path)

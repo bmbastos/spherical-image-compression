@@ -37,7 +37,7 @@ def plot_graphics_of_two_models(first_model:list, second_model:list) -> None:
 	fig, axs = plt.subplots(2, 2, label="Differance of RD-Curve between DCT and RDCT")
 	axs[0, 0].grid(True)
 	axs[0, 0].set_title("QF X PSNR")
-	axs[0, 0].plot(first_model[3], first_model[0], color='green', label="DCT")
+	axs[0, 0].plot(first_model[3], first_model[0], color='red', label="DCT")
 	axs[0, 0].plot(second_model[3], second_model[0], color='blue', label="RDCT")
 	axs[0, 0].set_xlabel("QF values")
 	axs[0, 0].set_ylabel("PSNR values")
@@ -45,7 +45,7 @@ def plot_graphics_of_two_models(first_model:list, second_model:list) -> None:
 
 	axs[0, 1].grid(True)
 	axs[0, 1].set_title("QF X SSIM")
-	axs[0, 1].plot(first_model[3], first_model[1], color='green', label="DCT")
+	axs[0, 1].plot(first_model[3], first_model[1], color='red', label="DCT")
 	axs[0, 1].plot(second_model[3], second_model[1], color='blue', label="RDCT")
 	axs[0, 1].set_xlabel("QF values")
 	axs[0, 1].set_ylabel("SSIM values")
@@ -53,7 +53,7 @@ def plot_graphics_of_two_models(first_model:list, second_model:list) -> None:
 
 	axs[1, 0].grid(True)
 	axs[1, 0].set_title("RD Curve (BPP X PSNR)")
-	axs[1, 0].plot(first_model[2], first_model[0], color='green', label="DCT")
+	axs[1, 0].plot(first_model[2], first_model[0], color='red', label="DCT")
 	axs[1, 0].plot(second_model[2], second_model[0], color='blue', label="RDCT")
 	axs[1, 0].set_xlabel("BPP")
 	axs[1, 0].set_ylabel("PSNR values")
@@ -61,7 +61,7 @@ def plot_graphics_of_two_models(first_model:list, second_model:list) -> None:
 
 	axs[1, 1].grid(True)
 	axs[1, 1].set_title("RD CUrve (BPP X SSIM)")
-	axs[1, 1].plot(first_model[2], first_model[1], color='green', label="DCT")
+	axs[1, 1].plot(first_model[2], first_model[1], color='red', label="DCT")
 	axs[1, 1].plot(second_model[2], second_model[1], color='blue', label="RDCT")
 	axs[1, 1].set_xlabel("BPP")
 	axs[1, 1].set_ylabel("SSIM values")

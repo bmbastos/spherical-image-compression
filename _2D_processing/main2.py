@@ -1,3 +1,5 @@
+from pdb import set_trace as pause
+
 import myFunctions as func
 import myPlots as plot
 
@@ -6,7 +8,7 @@ Objetivo: Comparar a DCT com a RDCT
 """
 
 path = "images/"
-file_name = "boat.512.tiff"
+file_name = "elaine.512.tiff"
 image = func.get_image(file_name, path)
 
 psnr_values, ssim_values, bpp_values, qf_values = func.calculate_values_of_graphics(image, func.c_matrix, 8)

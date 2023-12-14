@@ -6,6 +6,7 @@ from numpy import *
 from time import time	
 from glob import glob
 from skimage.io import imread
+from matplotlib import pyplot as plot
 
 def QMatrix(QF):
 
@@ -111,5 +112,11 @@ if __name__ == "__main__":
     qHandler.printLUT()
     Q = qHandler.QtildeAtEl(el = pi/4., QF = QF)
     print(Q)
-    
+
+    ## Continuação Bruno Bastos
+
+    image = imread("./omnidirecional_images/DrivingInCity_3840x1920_30fps_8bit_420_erp_0.bmp")
+    plot.imshow(image)
+    plot.show()
+
 #'''   

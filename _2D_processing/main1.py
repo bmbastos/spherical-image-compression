@@ -1,3 +1,4 @@
+from pdb import set_trace as pause
 import myFunctions as func
 import myPlots as plot
 from skimage import color
@@ -14,7 +15,26 @@ parametric_quantization = False									# Tipo de quantização (parametrica ou 
 quality_factor = 95												# Fator de qualidade caso seja escolhido o esse tipo de quantização
 path = "images/"												# Local de armazenamento das imagens a serem processadas
 
+
+print()
+print()
+print()
+print()
 c = func.calculate_matrix_of_transformation(k)						# Cálculo da matrix de transformação
+for row in c:
+	print()
+	print("                       ", end=' ')
+	for col in row:
+		print(func.np.round(col, 6), end=' ')
+	print()
+print()
+print()
+print()
+print()
+print()
+print()
+pause()
+
 q = 0.0															    # A partir da variável booleana escolhemos como será feita a quantização
 if parametric_quantization:
 	q = func.calculate_matrix_of_parametric_quantization(k, r)
@@ -33,12 +53,12 @@ start_time = func.t.time()											# Conta o inicio do tempo de processamento
 
 for file in files:						    						# Processamento das imagens
 	image = 0
-	print(file)
-	if file.endswith('.tiff'):
+	if file.endswith('elaine.512.tiff'):
 		full_path = func.os.path.join(path, file)
 		image = func.get_image(full_path)
 		if not func.is_gray_scale(image):
 			image = color.rgb2gray(image)
+		plot.print_image(image)
 		psnr, ssim, bpp, qf = func.calculate_values_of_graphics(image, c, k)
 		psnr_matrix.append(psnr)
 		ssim_matrix.append(ssim)
