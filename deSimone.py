@@ -73,7 +73,7 @@ def apply_quantization(quantization_matrix:ndarray, dct_image:ndarray, k:int) ->
 	while(row < nrows):
 		col = 0
 		while(col < ncols):
-			quantized_image[row:row+k, col:col+k] = multiply(round(divide(dct_image[row:row+k, col:col+k], quantization_matrix)), quantization_matrix)
+			quantized_image[row:row+k, col:col+k] = multiply(around(divide(dct_image[row:row+k, col:col+k], quantization_matrix)), quantization_matrix)
 			col += k
 		row += k
 	return quantized_image
@@ -169,6 +169,23 @@ QB = array([[20, 17, 18, 19, 22, 36, 36, 31],
 			[45, 100, 62, 79, 100, 70, 70, 101],
 			[41, 41, 74, 59, 70, 90, 100, 99]], dtype=float)
 
+# Matrizes diagonais
+# Matriz diagonal utilizada por Oliveira
+S = matrix(diag([1/(pow(8, 1/2)), 1/pow(6,1/2), 1/2, 1/pow(6,1/2), 1/(pow(8, 1/2)), 1/pow(6,1/2), 1/2, 1/pow(6,1/2)])).T
+# Matriz diagonal utilizada por Brahime
+SB = matrix(diag([1/(pow(8, 1/2)), 1/2, 1/2, 1/(pow(2, 1/2)), 1/(pow(8, 1/2)), 1/2, 1/2, 1/(pow(2, 1/2))])).T
+
+# Elementos da matriz diagonal vetorizados
+s = matrix(diag(S))
+sb = matrix(diag(SB))
+
+# Matriz ortogonal
+C = dot(S, T0)
+CB = dot(SB, TB)
+# Matriz diagonal 8x8
+Z = dot(s.T, s)
+ZB = dot(sb.T, sb)
+
 #TODO Fazer uma função que recebe uma matriz de quantização, uma elevação 'el' e um fator de qualidade 'qf'
 def map_k_and_el(row_index:int, image_height:int) -> tuple:
 	el = row_index/image_height * pi - pi/2
@@ -177,25 +194,30 @@ def map_k_and_el(row_index:int, image_height:int) -> tuple:
 	return (k, el)
 
 
-def deSimone_quantization(image:ndarray, quality_factor:int, quantization_matrix:ndarray) -> ndarray:
+def deSimone_compression(image:ndarray, quality_factor:int, quantization_matrix:ndarray, transformation_matrix) -> ndarray:
 	nrows, ncols = image.shape
-	quantized_image = zeros(image.shape)
+	compressed_image = zeros(image.shape)
 	N = 8
-	ks, els = [], []
+	transformed_image = apply_exact_transform(transformation_matrix, image, N)
+	q_matrix = quantization(quality_factor, quantization_matrix)
 	for row_index in range(0, nrows, N):
 		k, el = map_k_and_el(row_index, nrows)
-		ks.append(k)
-		els.append(el)
-	pause()
-
-	return quantized_image
+		Q = []
+		for x in k:
+			Q.append(q_matrix.T[x])
+		auxImage = transformed_image[row_index:row_index+N]
+		quantized_image = apply_quantization(Q, auxImage, N)
+		compressed_image[row_index:row_index+N] = apply_inverse_transform(transformation_matrix, quantized_image, N)
+	return compressed_image
 
 '''main'''
 path_images = "test_images/"
 file = "sample-ERP.jpg"
 full_path = os.path.join(path_images, file)
-image = imread(full_path)
+image = imread(full_path, as_gray=True)
 print(image.shape)
-#deSimone_quantization(image, 50, Q0)
+n_image = deSimone_compression(image, 15, Q0, TB)
+plot.imshow(n_image, cmap='gray', label=file)
+plot.show()
 
 pause()
