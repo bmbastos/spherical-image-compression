@@ -4,6 +4,7 @@ from time import time
 from skimage.io import imread
 from matplotlib import pyplot as plot
 from pdb import set_trace as pause
+import tools
 
 """
 Principal implementação onde será embedado as ideias de compressão de imagens
@@ -194,18 +195,26 @@ def map_k_and_el(row_index:int, image_height:int) -> tuple:
 	return (k, el)
 
 
-def deSimone_compression(image:ndarray, quality_factor:int, quantization_matrix:ndarray, transformation_matrix) -> ndarray:
-	nrows, ncols = image.shape
-	compressed_image = zeros(image.shape)
+def deSimone_compression(image:ndarray, transformation_matrix:ndarray=None, scale_vector:list=None, quantization_matrix:ndarray=None, quality_factor: int = 50) -> ndarray:
 	N = 8
-	transformed_image = apply_exact_transform(transformation_matrix, image, N)
-	q_matrix = quantization(quality_factor, quantization_matrix)
-	for row_index in range(0, nrows, N):
-		k, el = map_k_and_el(row_index, nrows)
+	nrows, ncols = image.shape														# Pegando altura e largura da imagem
+	compressed_image = zeros(image.shape)											# Criando o espaço onde será armazenada a imagem transformada
+	
+	# Aplica a transformada exata
+	transformed_image = apply_exact_transform(transformation_matrix, image, N)		# Aplicação da transformada exata usando a matriz de transformação passada como parâmetro
+	
+	# Processa o vetor de escala
+	s = matrix(diag(scale_vector)).T
+	S = matrix(diag(s))
+	Z = dot(S.T, S)
+	
+	q_matrix = quantization(quality_factor, quantization_matrix)					# Calculo da matriz de quantização baseada em qf e na matriz de quantização passada
+	for row_index in range(0, nrows, N):											 
+		k, el = map_k_and_el(row_index, nrows)										# Para cada linha (pulando de 8 em 8) calculo os k elementos e a elevação daquela linha
 		Q = []
 		for x in k:
-			Q.append(q_matrix.T[x])
-		auxImage = transformed_image[row_index:row_index+N]
+			Q.append(q_matrix.T[x])													# Construção da matriz de quantização replicando as colunas escolhidas por k
+		auxImage = transformed_image[row_index:row_index+N]							
 		quantized_image = apply_quantization(Q, auxImage, N)
 		compressed_image[row_index:row_index+N] = apply_inverse_transform(transformation_matrix, quantized_image, N)
 	return compressed_image
@@ -216,8 +225,6 @@ file = "sample-ERP.jpg"
 full_path = os.path.join(path_images, file)
 image = imread(full_path, as_gray=True)
 print(image.shape)
-n_image = deSimone_compression(image, 15, Q0, TB)
+n_image = deSimone_compression(image)
 plot.imshow(n_image, cmap='gray', label=file)
 plot.show()
-
-pause()
