@@ -112,6 +112,20 @@ def np2_round(quantization_matrix:matrix) -> matrix:
 def np2_ceil(quantization_matrix:matrix) -> matrix:
 	return power(2, ceil(log2(quantization_matrix)))
 
+def compute_scale_matrix(transformation_matrix:ndarray) -> matrix:
+	if transformation_matrix.shape != (8,8):
+		print("Erro: matrix de trasformação deve ser 8x8 ")
+	else:
+		values = []
+		for row in range(8):
+			count = 0
+			for col in range(8):
+				if transformation_matrix[row,col] != 0:
+					count += 1
+			values.append(1/sqrt(count))
+		scale_matrix = matrix(diag(values)).T
+		return scale_matrix, matrix(diag(scale_matrix))	# Matrix diagonal e elementos da matriz diagonal vetorizados
+
 
 # DEFINIÇÕES DE CONSTANTES 
 
@@ -170,22 +184,6 @@ QB = array([[20, 17, 18, 19, 22, 36, 36, 31],
 			[45, 100, 62, 79, 100, 70, 70, 101],
 			[41, 41, 74, 59, 70, 90, 100, 99]], dtype=float)
 
-# Matrizes diagonais
-# Matriz diagonal utilizada por Oliveira
-S = matrix(diag([1/(pow(8, 1/2)), 1/pow(6,1/2), 1/2, 1/pow(6,1/2), 1/(pow(8, 1/2)), 1/pow(6,1/2), 1/2, 1/pow(6,1/2)])).T
-# Matriz diagonal utilizada por Brahime
-SB = matrix(diag([1/(pow(8, 1/2)), 1/2, 1/2, 1/(pow(2, 1/2)), 1/(pow(8, 1/2)), 1/2, 1/2, 1/(pow(2, 1/2))])).T
-
-# Elementos da matriz diagonal vetorizados
-s = matrix(diag(S))
-sb = matrix(diag(SB))
-
-# Matriz ortogonal
-C = dot(S, T0)
-CB = dot(SB, TB)
-# Matriz diagonal 8x8
-Z = dot(s.T, s)
-ZB = dot(sb.T, sb)
 
 #TODO Fazer uma função que recebe uma matriz de quantização, uma elevação 'el' e um fator de qualidade 'qf'
 def map_k_and_el(row_index:int, image_height:int) -> tuple:
@@ -195,36 +193,38 @@ def map_k_and_el(row_index:int, image_height:int) -> tuple:
 	return (k, el)
 
 
-def deSimone_compression(image:ndarray, transformation_matrix:ndarray=None, scale_vector:list=None, quantization_matrix:ndarray=None, quality_factor: int = 50) -> ndarray:
-	N = 8
-	nrows, ncols = image.shape														# Pegando altura e largura da imagem
-	compressed_image = zeros(image.shape)											# Criando o espaço onde será armazenada a imagem transformada
-	
-	# Aplica a transformada exata
-	transformed_image = apply_exact_transform(transformation_matrix, image, N)		# Aplicação da transformada exata usando a matriz de transformação passada como parâmetro
-	
-	# Processa o vetor de escala
-	s = matrix(diag(scale_vector)).T
-	S = matrix(diag(s))
-	Z = dot(S.T, S)
-	
-	q_matrix = quantization(quality_factor, quantization_matrix)					# Calculo da matriz de quantização baseada em qf e na matriz de quantização passada
-	for row_index in range(0, nrows, N):											 
-		k, el = map_k_and_el(row_index, nrows)										# Para cada linha (pulando de 8 em 8) calculo os k elementos e a elevação daquela linha
-		Q = []
-		for x in k:
-			Q.append(q_matrix.T[x])													# Construção da matriz de quantização replicando as colunas escolhidas por k
-		auxImage = transformed_image[row_index:row_index+N]							
-		quantized_image = apply_quantization(Q, auxImage, N)
-		compressed_image[row_index:row_index+N] = apply_inverse_transform(transformation_matrix, quantized_image, N)
-	return compressed_image
+def deSimone_compression(image:ndarray, transformation_matrix:ndarray=None, quantization_matrix:ndarray=None, quality_factor: int = 50) -> ndarray:
+	if transformation_matrix.any == None or quantization_matrix.any == None:
+		print("Erro: É necessário fornecer as matrizes de transformação e quantização ")
+		exit()
+	else:
+		N = 8
+		nrows, ncols = image.shape														# Pegando altura e largura da imagem
+		compressed_image = zeros(image.shape)											# Criando o espaço onde será armazenada a imagem transformada
+		
+		# Aplica a transformada exata
+		transformed_image = apply_exact_transform(transformation_matrix, image, N)		# Aplicação da transformada exata usando a matriz de transformação passada como parâmetro
+		
+		# Processa o vetor de escala
+		S, s = compute_scale_matrix(transformation_matrix)
+		pause()
+		
+		q_matrix = quantization(quality_factor, quantization_matrix)					# Calculo da matriz de quantização baseada em qf e na matriz de quantização passada
+		for row_index in range(0, nrows, N):											 
+			k, el = map_k_and_el(row_index, nrows)										# Para cada linha (pulando de 8 em 8) calculo os k elementos e a elevação daquela linha
+			Q = []
+			for x in k:
+				Q.append(q_matrix.T[x])													# Construção da matriz de quantização replicando as colunas escolhidas por k
+			auxImage = transformed_image[row_index:row_index+N]							
+			quantized_image = apply_quantization(Q, auxImage, N)
+			compressed_image[row_index:row_index+N] = apply_inverse_transform(transformation_matrix, quantized_image, N)
+		return compressed_image
 
 '''main'''
 path_images = "test_images/"
 file = "sample-ERP.jpg"
 full_path = os.path.join(path_images, file)
 image = imread(full_path, as_gray=True)
-print(image.shape)
-n_image = deSimone_compression(image)
-plot.imshow(n_image, cmap='gray', label=file)
-plot.show()
+n_image = deSimone_compression(image, T0, Q0)
+#plot.imshow(n_image, cmap='gray', label=file)
+#plot.show()
