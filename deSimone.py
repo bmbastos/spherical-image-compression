@@ -271,7 +271,7 @@ def prepareQPhi(image:ndarray, quantization_matrix:ndarray, QF:int=50, N = 8):
 	#plot.imshow(tools.Tools.remount(QPhi, (h, w))); plot.show() # plot the quantization matrices map
 	return QPhi
 
-def deSimone_compression(image:ndarray, transformation_matrix:ndarray=None, quantization_matrix:ndarray=None, quality_factor: int = 50) -> ndarray:
+def deSimone_compression(image:ndarray, aproximation:bool=False, brahime_propose:bool=False, transformation_matrix:ndarray=None, quantization_matrix:ndarray=None, quality_factor: int = 50) -> ndarray:
 	if transformation_matrix.any == None or quantization_matrix.any == None:
 		print("Erro: É necessário fornecer as matrizes de transformação e quantização ")
 		exit()
@@ -285,14 +285,26 @@ def deSimone_compression(image:ndarray, transformation_matrix:ndarray=None, quan
 		Q_i = []
 
 		Q_ = prepareQPhi(image, quantization_matrix, quality_factor, N)
+		P = dot(S, transformation_matrix)
 		for q in Q_:
-			Q_f.append(asarray(divide(q, Z)))
-			Q_i.append(asarray(multiply(Z, q)))
+			Q_f.append(asarray(np2_ceil(divide(q, Z))))
+			Q_i.append(asarray(np2_ceil(multiply(Z, q))))
 		Q_f = asarray(Q_f)
 		Q_i = asarray(Q_i)
-		bpp_aux, image_r = encodeQuantiseNDecodeOliveira(image, transformation_matrix, Q_f, Q_i)
+
+		image_r = 0
+		if aproximation:
+			if brahime_propose:
+				bpp_aux, image_r = encodeQuantiseNDecodeOliveira(image, P, Q_f, Q_i)
+			else:
+				bpp_aux, image_r = encodeQuantiseNDecode(image, P, np2_ceil(Q_))
+		else:
+			if brahime_propose:
+				bpp_aux, image_r = encodeQuantiseNDecodeOliveira(image, transformation_matrix, Q_f, Q_i)
+			else:
+				bpp_aux, image_r = encodeQuantiseNDecode(image, transformation_matrix, np2_ceil(Q_))
+
 		image_r = clip(image_r, 0, 255)
-		
 		return image_r
 
 '''main'''
@@ -303,7 +315,7 @@ image = around(255*imread(full_path, as_gray=True))
 
 QF = 95
 
-n_image = deSimone_compression(image, T0, Q0, QF)
+n_image = deSimone_compression(image, True, False, T_, Q0, QF)
 plot.imshow(n_image, 'gray'); plot.title("Compressed image with QF = " + str(QF)); plot.show()
 plot.imshow(n_image[180:188, 360:368], 'gray'); plot.title("Compressed image 8x8 with QF = " + str(QF)); plot.show()
 #plot.imshow(n_image, cmap='gray', label=file)
