@@ -126,10 +126,9 @@ def prepareQPhi(QF, h, w, N = 8):
     qHandler = DeSimoneQuantMatrix(h) 
     els = linspace(-pi/2, pi/2, h//N+1)
     els = 0.5*(els[1:] + els[:-1]) # gets the "central" block elevation
-    #pause()
     QPhi = asarray([qHandler.QtildeAtEl(el = el, QF = QF) for el in els])
     QPhi = repeat(QPhi, w//N, axis=0)
-    plt.imshow(Tools.remount(QPhi, (h, w))); plt.show() # plot the quantization matrices map
+    #plt.imshow(Tools.remount(QPhi, (h, w))); plt.show() # plot the quantization matrices map
     return QPhi
 
 
@@ -144,19 +143,19 @@ if __name__ == "__main__":
     FName = './test_images/sample-ERP.jpg'
 
     I = around(255*imread(FName, True))
-    plt.imshow(I, cmap='gray'); plt.show() # original
+    #plt.imshow(I, cmap='gray'); plt.show() # original
 
 
     QF = 50
     C = DCT(8)
     QPhi = prepareQPhi(QF, I.shape[0], I.shape[1])
-
     _, Ir = encodeQuantiseNDecode(I, C, QPhi) # first value helps computing bpp
     Ir = clip(Ir, 0, 255)
 
     plt.imshow(Ir, cmap='gray'); plt.show() # decompressed image
+    plt.imshow(Ir[180: 188, 360:368], cmap='gray'); plt.show()
 
     #print(I.shape, Ir.shape)
-    plt.imshow(abs(I-Ir)); plt.show() #error 
+    #plt.imshow(abs(I-Ir)); plt.show() #error 
         
 #'''   
