@@ -2,6 +2,7 @@ import os
 from numpy import *
 from time import time
 from skimage.io import imread
+from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from matplotlib import pyplot as plot
 from pdb import set_trace as pause
 import tools
@@ -126,6 +127,18 @@ def compute_scale_matrix(transformation_matrix:ndarray) -> matrix:
 		scale_matrix = matrix(diag(values)).T
 		return scale_matrix, matrix(diag(scale_matrix))	# Matrix diagonal e elementos da matriz diagonal vetorizados
 
+# Função que calcula a quantidade de bits por pixels
+def calculate_number_of_bytes_of_image_per_pixels(image:ndarray) -> int:
+	nbytes = 0
+	nrows = image.shape[0]
+	row = 0
+	while row < nrows:
+		result = isclose(image[row], 0)
+		nbytes = nbytes + count_nonzero(logical_not(result))
+		row += 1
+	bpp = (nbytes * 8) / (image.shape[0] * image.shape[1])	# Oito (8) é a quantidade de bits que representam cada pixel da imagem
+	return bpp
+
 
 # DEFINIÇÕES DE CONSTANTES 
 
@@ -141,7 +154,7 @@ A = array([[127, 123, 125, 120, 126, 123, 127, 128,],
 
 # Matrizes de transformação
 # Matriz de tranformação JPEG
-T_ = calculate_matrix_of_transformation(8)
+T = calculate_matrix_of_transformation(8)
 
 # Ternária padrão
 T0 = array([[1, 1, 1, 1, 1, 1, 1, 1],
@@ -244,15 +257,15 @@ def QtildeAtEl(k_lut:ndarray, min_lut:ndarray, max_lut:ndarray, el:float32, quan
 		return Q
 
 def encodeQuantiseNDecode(image:ndarray, transformation_matrix:ndarray, quantization_matrix:ndarray, N = 8):
-    h, w = image.shape
-    A = tools.Tools.umount(image, (N, N))# - 128
-    Aprime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', transformation_matrix, A), transformation_matrix.T) # forward transform
-    Aprime2 = multiply(quantization_matrix, around(divide(Aprime1, quantization_matrix))) # quantization
-    Aprime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', transformation_matrix.T, Aprime2), transformation_matrix) # inverse transform
-    B = tools.Tools.remount(Aprime3, (h, w)) #+ 128
-    return Aprime2.reshape(h,w), B 
+	h, w = image.shape
+	A = tools.Tools.umount(image, (N, N))# - 128
+	Aprime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', transformation_matrix, A), transformation_matrix.T) # forward transform
+	Aprime2 = multiply(quantization_matrix, around(divide(Aprime1, quantization_matrix))) # quantization
+	Aprime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', transformation_matrix.T, Aprime2), transformation_matrix) # inverse transform
+	B = tools.Tools.remount(Aprime3, (h, w)) #+ 128
+	return Aprime2.reshape(h,w), B 
 
-def encodeQuantiseNDecodeOliveira(image:ndarray, transformation_matrix:ndarray, quantization_matrix_forward:ndarray, quantization_matrix_inverse:ndarray, N = 8):
+def encodeQuantiseNDecodeBrahimi(image:ndarray, transformation_matrix:ndarray, quantization_matrix_forward:ndarray, quantization_matrix_inverse:ndarray, N = 8):
 	h, w = image.shape
 	A = tools.Tools.umount(image, (N, N))# - 128
 	Aprime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', transformation_matrix, A), transformation_matrix.T) # forward transform
@@ -271,41 +284,49 @@ def prepareQPhi(image:ndarray, quantization_matrix:ndarray, QF:int=50, N = 8):
 	#plot.imshow(tools.Tools.remount(QPhi, (h, w))); plot.show() # plot the quantization matrices map
 	return QPhi
 
-def deSimone_compression(image:ndarray, aproximation:bool=False, brahime_propose:bool=False, transformation_matrix:ndarray=None, quantization_matrix:ndarray=None, quality_factor: int = 50) -> ndarray:
+def use_q_phi(image:ndarray, q_matrix: ndarray, qf:int, block_len:int, response:bool) -> ndarray:
+	if response == True:
+		return prepareQPhi(image, q_matrix, qf, block_len)
+	else:
+		q = []
+		for _ in range(round(image.shape[0] * image.shape[1] / 8 / 8)):
+			q.append(quantization(qf, q_matrix))
+		q = asarray(q)
+		return q
+
+def use_aproximation_transform(transformation_matrix:ndarray, diagonal_matrix:ndarray, response:bool) -> ndarray:
+	if response == True:
+		return dot(diagonal_matrix, transformation_matrix)
+	else:
+		return transformation_matrix
+
+def deSimone_compression(image:ndarray, q_phi:bool=False, aproximation:bool=False, brahimi_propose:bool=False, transformation_matrix:ndarray=None, quantization_matrix:ndarray=None, quality_factor: int = 50) -> ndarray:
 	if transformation_matrix.any == None or quantization_matrix.any == None:
 		print("Erro: É necessário fornecer as matrizes de transformação e quantização ")
 		exit()
 	else:
-		N = 8												# Pegando altura e largura da imagem
-		# Processa o vetor de escala
+		N = 8												
+		
 		S, s = compute_scale_matrix(transformation_matrix)
 		Z = dot(s.T, s)
 
 		Q_f = []
 		Q_i = []
 
-		Q_ = prepareQPhi(image, quantization_matrix, quality_factor, N)
-		P = dot(S, transformation_matrix)
-		for q in Q_:
-			Q_f.append(asarray(np2_ceil(divide(q, Z))))
-			Q_i.append(asarray(np2_ceil(multiply(Z, q))))
-		Q_f = asarray(Q_f)
-		Q_i = asarray(Q_i)
+		Q_ = use_q_phi(image, quantization_matrix, quality_factor, N, q_phi)
+		T_ = use_aproximation_transform(transformation_matrix, S, aproximation)
 
-		image_r = 0
-		if aproximation:
-			if brahime_propose:
-				bpp_aux, image_r = encodeQuantiseNDecodeOliveira(image, P, Q_f, Q_i)
-			else:
-				bpp_aux, image_r = encodeQuantiseNDecode(image, P, np2_ceil(Q_))
-		else:
-			if brahime_propose:
-				bpp_aux, image_r = encodeQuantiseNDecodeOliveira(image, transformation_matrix, Q_f, Q_i)
-			else:
-				bpp_aux, image_r = encodeQuantiseNDecode(image, transformation_matrix, np2_ceil(Q_))
+		for q in Q_:
+			Q_f.append(asarray(divide(q, Z)))
+			Q_i.append(asarray(multiply(Z, q)))
+		Q_f = asarray(Q_f)
+		Q_i = asarray(Q_i)			
+
+		bpp_aux, image_r = encodeQuantiseNDecodeBrahimi(image, T_, Q_f, Q_i) if brahimi_propose else encodeQuantiseNDecode(image, T_, Q_)
 
 		image_r = clip(image_r, 0, 255)
-		return image_r
+		#pause()
+		return bpp_aux, image_r
 
 '''main'''
 path_images = "test_images/"
@@ -313,10 +334,59 @@ file = "sample-ERP.jpg"
 full_path = os.path.join(path_images, file)
 image = around(255*imread(full_path, as_gray=True))
 
-QF = 95
+data = {}
+data.update({'option1':{'QPhi': False, 'AproximateTransformation': False, 'BrahimeQuantization': True, 'PSNR': [], 'SSIM': [], 'BPP': []}})
+data.update({'option2':{'QPhi': False, 'AproximateTransformation': True, 'BrahimeQuantization': False, 'PSNR': [], 'SSIM': [], 'BPP': []}})
 
-n_image = deSimone_compression(image, True, False, T_, Q0, QF)
-plot.imshow(n_image, 'gray'); plot.title("Compressed image with QF = " + str(QF)); plot.show()
-plot.imshow(n_image[180:188, 360:368], 'gray'); plot.title("Compressed image 8x8 with QF = " + str(QF)); plot.show()
+quality_factors = list(range(5,96,5))
+for QF in quality_factors:
+	bpp1, n_image1 = deSimone_compression(image, data['option1']['QPhi'], data['option1']['AproximateTransformation'], data['option1']['BrahimeQuantization'], T0, Q0, QF)
+	data['option1']['PSNR'].append(peak_signal_noise_ratio(image, n_image1, data_range=255))
+	data['option1']['SSIM'].append(structural_similarity(image, n_image1, data_range=255))
+	data['option1']['BPP'].append(count_nonzero(logical_not(isclose(bpp1, 0))) * 8 / (bpp1.shape[0] * bpp1.shape[1]))
+
+	bpp2, n_image2 = deSimone_compression(image, data['option2']['QPhi'], data['option2']['AproximateTransformation'], data['option2']['BrahimeQuantization'], T0, Q0, QF)
+	data['option2']['PSNR'].append(peak_signal_noise_ratio(image, n_image2, data_range=255))
+	data['option2']['SSIM'].append(structural_similarity(image, n_image2, data_range=255))
+	data['option2']['BPP'].append(count_nonzero(logical_not(isclose(bpp2, 0))) * 8 / (bpp2.shape[0] * bpp2.shape[1]))
+
+fig, axs = plot.subplots(2, 2, label='Testes')
+axs[0, 0].grid(True)
+axs[0, 0].set_title("QF X PSNR")
+axs[0, 0].plot(quality_factors, data['option1']['PSNR'], color='red', label='Exact transform & Brahimi propose')
+axs[0, 0].plot(quality_factors, data['option2']['PSNR'], color='blue', label='RDCT with Standard quantization', ls='dashed')
+axs[0, 0].set_xlabel("QF values")
+axs[0, 0].set_ylabel("PSNR values")
+axs[0, 0].legend()
+
+axs[0, 1].grid(True)
+axs[0, 1].set_title("QF X SSIM")
+axs[0, 1].plot(quality_factors, data['option1']['SSIM'], color='red', label='Exact transform & Brahimi propose')
+axs[0, 1].plot(quality_factors, data['option2']['SSIM'], color='blue', label='RDCT with Standard quantization', ls='dashed')
+axs[0, 1].set_xlabel("QF values")
+axs[0, 1].set_ylabel("SSIM values")
+axs[0, 1].legend()
+
+axs[1, 0].grid(True)
+axs[1, 0].set_title("RD Curve (BPP X PSNR)")
+axs[1, 0].plot(data['option1']['BPP'], data['option1']['PSNR'], color='red', label='Exact transform & Brahimi propose')
+axs[1, 0].plot(data['option2']['BPP'], data['option2']['PSNR'], color='blue', label='RDCT with Standard quantization', ls='dashed')
+axs[1, 0].set_xlabel("BPP")
+axs[1, 0].set_ylabel("PSNR values")
+axs[1, 0].legend()
+
+axs[1, 1].grid(True)
+axs[1, 1].set_title("RD CUrve (BPP X SSIM)")
+axs[1, 1].plot(data['option1']['BPP'], data['option1']['SSIM'], color='red', label='Exact transform & Brahimi propose')
+axs[1, 1].plot(data['option2']['BPP'], data['option2']['SSIM'], color='blue', label='RDCT with Standard quantization', ls='dashed')
+axs[1, 1].set_xlabel("BPP")
+axs[1, 1].set_ylabel("SSIM values")
+axs[1, 1].legend()
+fig.tight_layout()
+plot.show()
+
+#n_image = deSimone_compression(image, True, False, T_, Q0, QF)
+#plot.imshow(n_image, 'gray'); plot.title("Compressed image with QF = " + str(QF)); plot.show()
+#plot.imshow(n_image[180:188, 360:368], 'gray'); plot.title("Compressed image 8x8 with QF = " + str(QF)); plot.show()
 #plot.imshow(n_image, cmap='gray', label=file)
 #plot.show()
