@@ -125,7 +125,7 @@ def compute_scale_matrix(transformation_matrix:ndarray) -> matrix:
 		#			count += 1
 		#	values.append(1/sqrt(count))
 		# scale_matrix = matrix(diag(values)).T
-		scale_matrix = sqrt(linalg.inv(dot(transformation_matrix,transformation_matrix.T)))
+		scale_matrix = sqrt(linalg.inv(dot(transformation_matrix, transformation_matrix.T)))
 		return scale_matrix, matrix(diag(scale_matrix))	# Matrix diagonal e elementos da matriz diagonal vetorizados
 
 # Função que calcula a quantidade de bits por pixels
@@ -250,9 +250,9 @@ def QtildeAtEl(k_lut:ndarray, min_lut:ndarray, max_lut:ndarray, el:float32, quan
 		for idx in range(len(k_lut)):
 			if el >= min_lut[idx] and el < max_lut[idx]: 
 				ks = k_lut[idx]
-		if ks is None and el == 0: ks = k_lut[0]
+		if ks is None and isclose(el, 0): ks = k_lut[0]
 		for k in ks:
-			Q.append(QM.T[k])
+			Q.append(QM.T.tolist()[k])
 		Q = asarray(Q)
 		Q = Q.T
 		return Q
@@ -295,8 +295,6 @@ def encodeQuantiseNDecodeBrahimiB(image:ndarray, quantization_matrix:ndarray, di
 		else:
 			quantization_matrix_forward = np2_ceil(quantization_matrix_forward)
 			quantization_matrix_backward = np2_ceil(quantization_matrix_backward)
-	print(quantization_matrix_forward.shape)
-	print(quantization_matrix_backward.shape)
 	#quantization_matrix_forward = tile(asarray(quantization_matrix_forward), (4050, 1 , 1))
 	#quantization_matrix_backward = tile(asarray(quantization_matrix_backward), (4050, 1 , 1))
 	return quantization_matrix_forward, quantization_matrix_backward 
@@ -306,7 +304,10 @@ def prepareQPhi(image:ndarray, quantization_matrix:ndarray, QF:int=50, N = 8):
 	k_lut, min_lut, max_lut = build_LUT(h)
 	els = linspace(-pi/2, pi/2, h//N+1)
 	els = 0.5*(els[1:] + els[:-1]) # gets the "central" block elevation
-	QPhi = asarray([QtildeAtEl(k_lut, min_lut, max_lut, el, quantization_matrix, QF) for el in els])
+	QPhi = []
+	for el in els: 
+		QPhi.append(QtildeAtEl(k_lut, min_lut, max_lut, el, quantization_matrix, QF))
+	QPhi = asarray(QPhi)
 	QPhi = repeat(QPhi, w//N, axis=0)
 	#plot.imshow(tools.Tools.remount(QPhi, (h, w))); plot.show() # plot the quantization matrices map
 	return QPhi
@@ -334,7 +335,7 @@ def use_adjustment_on_quantization(q_matrix, diag_matrix, use_qfit):
 	if use_qfit:
 		return dot(q_matrix)
 
-def deSimone_ompression_low_complexity(image, t_matrix, q_matrix, qf, use_qphi, use_qfit, use_np2, np2_type):
+def deSimone_compression_low_complexity(image, t_matrix, q_matrix, qf, use_qphi, use_qfit, use_np2, np2_type):
 	"""
 	Aplica a compressão de imagem de baixo custo
 	param image: ndarray    -> imagem a ser processada
@@ -355,11 +356,10 @@ def deSimone_ompression_low_complexity(image, t_matrix, q_matrix, qf, use_qphi, 
 	QPhi_backward = use_q_phi(image, q_backward, qf, N, use_qphi)
 	A = tools.Tools.umount(image, (N, N))# - 128
 	Aprime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', t_matrix, A), t_matrix.T) # forward transform
-	pause()
 	Aprime2 = multiply(divide(Aprime1, QPhi_forward).round(), QPhi_backward) # quantization
 	Aprime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', t_matrix.T, Aprime2), t_matrix) # inverse transform
 	B = tools.Tools.remount(Aprime3, (h, w)) #+ 128
-	Aprime2.reshape(h,w), clip(B, 0, 255) 
+	return Aprime2.reshape(h,w), clip(B, 0, 255) 
 
 def deSimone_compression(image:ndarray, q_phi:bool=False, aproximation:bool=False, brahimi_propose:bool=False, apply_np2:bool=False, np2_type:str='O', transformation_matrix:ndarray=None, quantization_matrix:ndarray=None, quality_factor: int = 50) -> ndarray:
 	if transformation_matrix.any == None or quantization_matrix.any == None:
@@ -398,7 +398,7 @@ datas.update({'option8':{'Title': '[T, NP2O(QPhif), NP2O(QPhib)]', 'QPhi': True,
 datas.update({'option9':{'Title': '[T, NP2B(QBf), NP2B(QBb)]', 'QPhi': False, 'AproximateTransformation': False, 'BrahimeQuantization': True, 'NP2': True, 'PSNR': [], 'SSIM': [], 'BPP': [], 'color': 'g', 'lineStyle': 'dashed'}})
 datas.update({'option10':{'Title': '[T, NP2B(QBPhif), NP2B(QBPhib)]', 'QPhi': True, 'AproximateTransformation': False, 'BrahimeQuantization': True, 'NP2': True, 'PSNR': [], 'SSIM': [], 'BPP': [], 'color': 'g', 'lineStyle': 'dashed'}})
 
-datas.update({'option11':{'Title': '[Low-complex1]', 'QPhi': True, 'AproximateTransformation': False, 'BrahimeQuantization': True, 'NP2': True, 'PSNR': [], 'SSIM': [], 'BPP': [], 'color': 'black', 'lineStyle': 'dashed'}})
+datas.update({'option11':{'Title': '[Low-complex1]', 'QPhi': False, 'AproximateTransformation': False, 'BrahimeQuantization': True, 'NP2': True, 'PSNR': [], 'SSIM': [], 'BPP': [], 'color': 'black', 'lineStyle': 'dashed'}})
 datas.update({'option12':{'Title': '[Low-complex2]', 'QPhi': True, 'AproximateTransformation': False, 'BrahimeQuantization': True, 'NP2': True, 'PSNR': [], 'SSIM': [], 'BPP': [], 'color': 'black', 'lineStyle': 'dashed'}})
 # for data in datas:
 	# print(f"{data} - \tQPhi:{datas[data]['QPhi']} \tAproximateTransformation:{datas[data]['AproximateTransformation']} \tBrahimeQuantization:{datas[data]['BrahimeQuantization']} \tNP2:{datas[data]['NP2']}")
@@ -444,23 +444,23 @@ for QF in quality_factors:
 	datas['option8']['PSNR'].append(peak_signal_noise_ratio(image, n_image8, data_range=255))
 	datas['option8']['SSIM'].append(structural_similarity(image, n_image8, data_range=255))
 	datas['option8']['BPP'].append(count_nonzero(logical_not(isclose(bpp8, 0))) * 8 / (bpp8.shape[0] * bpp8.shape[1]))
-
-	bpp9, n_image9 = deSimone_compression(image, datas['option9']['QPhi'], datas['option9']['AproximateTransformation'], datas['option9']['BrahimeQuantization'], datas['option9']['NP2'], 'B', TB, QB, QF)
+	if(QF == 60): print('option9'); pause() ## Pode ser que o problema esteja em Ceil ou Round
+	bpp9, n_image9 = deSimone_compression(image, datas['option9']['QPhi'], datas['option9']['AproximateTransformation'], datas['option9']['BrahimeQuantization'], datas['option9']['NP2'], 'O', TB, QB, QF)
 	datas['option9']['PSNR'].append(peak_signal_noise_ratio(image, n_image9, data_range=255))
 	datas['option9']['SSIM'].append(structural_similarity(image, n_image9, data_range=255))
 	datas['option9']['BPP'].append(count_nonzero(logical_not(isclose(bpp9, 0))) * 8 / (bpp9.shape[0] * bpp9.shape[1]))
-
-	bpp10, n_image10 = deSimone_compression(image, datas['option10']['QPhi'], datas['option10']['AproximateTransformation'], datas['option10']['BrahimeQuantization'], datas['option10']['NP2'], 'B', TB, QB, QF)
+	if(QF == 60): print('option10'); pause() ## Pode ser que o problema esteja em Ceil ou Round
+	bpp10, n_image10 = deSimone_compression(image, datas['option10']['QPhi'], datas['option10']['AproximateTransformation'], datas['option10']['BrahimeQuantization'], datas['option10']['NP2'], 'O', TB, QB, QF)
 	datas['option10']['PSNR'].append(peak_signal_noise_ratio(image, n_image10, data_range=255))
 	datas['option10']['SSIM'].append(structural_similarity(image, n_image10, data_range=255))
 	datas['option10']['BPP'].append(count_nonzero(logical_not(isclose(bpp10, 0))) * 8 / (bpp10.shape[0] * bpp10.shape[1]))
 
-	bpp11, n_image11 = deSimone_ompression_low_complexity(image, T, Q0, QF, datas['option11']['QPhi'], True, datas['option11']['NP2'], 'O')
+	bpp11, n_image11 = deSimone_compression_low_complexity(image, T, Q0, QF, datas['option11']['QPhi'], True, datas['option11']['NP2'], 'O')
 	datas['option11']['PSNR'].append(peak_signal_noise_ratio(image, n_image11, data_range=255))
 	datas['option11']['SSIM'].append(structural_similarity(image, n_image11, data_range=255))
 	datas['option11']['BPP'].append(count_nonzero(logical_not(isclose(bpp11, 0))) * 8 / (bpp11.shape[0] * bpp11.shape[1]))
 
-	bpp12, n_image12 = deSimone_ompression_low_complexity(image, T, Q0, QF, datas['option12']['QPhi'], True, datas['option12']['NP2'], 'O')
+	bpp12, n_image12 = deSimone_compression_low_complexity(image, T, Q0, QF, datas['option12']['QPhi'], True, datas['option12']['NP2'], 'O')
 	datas['option12']['PSNR'].append(peak_signal_noise_ratio(image, n_image12, data_range=255))
 	datas['option12']['SSIM'].append(structural_similarity(image, n_image12, data_range=255))
 	datas['option12']['BPP'].append(count_nonzero(logical_not(isclose(bpp12, 0))) * 8 / (bpp12.shape[0] * bpp12.shape[1]))
@@ -480,9 +480,11 @@ for teste in range(4):
 	elif teste == 2:
 		fig_title = "[Ĉ, Q] Vs. [T, NP2O(Qf), NP2O(Qb)] Vs. [T, NP2B(QBf), NP2B(QBb)]"
 		print('option9')
+		print('option11')
 	else:
 		fig_title = "[Ĉ, QPhi] Vs. [T, NP2O(QPhif), NP2O(QPhib)] Vs. [T, NP2B(QBPhif), NP2B(QBPhib)]"
 		print('option10')
+		print('option12')
 	print()
 	fig, axes = plot.subplots(2, 2,label="Teste " + str(teste+1) + " - " + fig_title)
 	# Primeiro quadrante
