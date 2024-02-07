@@ -116,7 +116,18 @@ def np2_ceil(quantization_matrix:matrix) -> matrix:
 def compute_scale_matrix(transformation_matrix:ndarray) -> matrix:
 	if transformation_matrix.shape != (8,8):
 		print("Erro: matrix de trasformação deve ser 8x8 ")
+	# else:
 	else:
+		values = []
+		for row in range(8):
+			count = 0
+			for col in range(8):
+				if transformation_matrix[row,col] != 0:
+					count += 1
+			values.append(1/sqrt(count))
+		scale_matrix = matrix(diag(values)).T
+		return scale_matrix, matrix(diag(scale_matrix))	# Matrix diagonal e elementos da matriz diagonal vetorizados
+
 		# values = []
 		# for row in range(8):
 		#	count = 0
@@ -125,8 +136,8 @@ def compute_scale_matrix(transformation_matrix:ndarray) -> matrix:
 		#			count += 1
 		#	values.append(1/sqrt(count))
 		# scale_matrix = matrix(diag(values)).T
-		scale_matrix = sqrt(linalg.inv(dot(transformation_matrix, transformation_matrix.T)))
-		return scale_matrix, matrix(diag(scale_matrix))	# Matrix diagonal e elementos da matriz diagonal vetorizados
+		# scale_matrix = sqrt(linalg.inv(dot(transformation_matrix, transformation_matrix.T)))
+		# return scale_matrix, matrix(diag(scale_matrix))	# Matrix diagonal e elementos da matriz diagonal vetorizados
 
 # Função que calcula a quantidade de bits por pixels
 def calculate_number_of_bytes_of_image_per_pixels(image:ndarray) -> int:
