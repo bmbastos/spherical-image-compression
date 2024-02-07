@@ -496,12 +496,12 @@ for QF in quality_factors:
 	datas['option8']['SSIM'].append(structural_similarity(image, n_image8, data_range=255))
 	datas['option8']['BPP'].append(count_nonzero(logical_not(isclose(bpp8, 0))) * 8 / (bpp8.shape[0] * bpp8.shape[1]))
 	if(QF == 60): print('option9'); pause() ## Pode ser que o problema esteja em Ceil ou Round
-	bpp9, n_image9 = deSimone_compression(image, datas['option9']['QPhi'], datas['option9']['AproximateTransformation'], datas['option9']['BrahimeQuantization'], datas['option9']['NP2'], 'O', TB, QB, QF)
+	bpp9, n_image9 = deSimone_compression(image, datas['option9']['QPhi'], datas['option9']['AproximateTransformation'], datas['option9']['BrahimeQuantization'], datas['option9']['NP2'], 'B', TB, QB, QF)
 	datas['option9']['PSNR'].append(peak_signal_noise_ratio(image, n_image9, data_range=255))
 	datas['option9']['SSIM'].append(structural_similarity(image, n_image9, data_range=255))
 	datas['option9']['BPP'].append(count_nonzero(logical_not(isclose(bpp9, 0))) * 8 / (bpp9.shape[0] * bpp9.shape[1]))
 	if(QF == 60): print('option10'); pause() ## Pode ser que o problema esteja em Ceil ou Round
-	bpp10, n_image10 = deSimone_compression(image, datas['option10']['QPhi'], datas['option10']['AproximateTransformation'], datas['option10']['BrahimeQuantization'], datas['option10']['NP2'], 'O', TB, QB, QF)
+	bpp10, n_image10 = deSimone_compression(image, datas['option10']['QPhi'], datas['option10']['AproximateTransformation'], datas['option10']['BrahimeQuantization'], datas['option10']['NP2'], 'B', TB, QB, QF)
 	datas['option10']['PSNR'].append(peak_signal_noise_ratio(image, n_image10, data_range=255))
 	datas['option10']['SSIM'].append(structural_similarity(image, n_image10, data_range=255))
 	datas['option10']['BPP'].append(count_nonzero(logical_not(isclose(bpp10, 0))) * 8 / (bpp10.shape[0] * bpp10.shape[1]))
