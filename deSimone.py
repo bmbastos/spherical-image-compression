@@ -284,6 +284,11 @@ def encodeQuantiseNDecodeBrahimi(image:ndarray, transformation_matrix:ndarray, q
 	B = tools.Tools.remount(Aprime3, (h, w)) #+ 128
 	return Aprime2.reshape(h,w), B 
 
+def encodeQuantiseNDecodeBrahimiB(quantization_matrix:ndarray, diagonal_matrix:ndarray):
+	quantization_matrix_forward = divide(quantization_matrix, diagonal_matrix)
+	quantization_matrix_backward = multiply(diagonal_matrix, quantization_matrix)
+	return asarray(quantization_matrix_forward), asarray(quantization_matrix_backward)
+
 def prepareQPhi(image:ndarray, quantization_matrix:ndarray, QF:int=50, N = 8):
 	h, w = image.shape
 	k_lut, min_lut, max_lut = build_LUT(h)
@@ -312,6 +317,53 @@ def use_aproximation_transform(transformation_matrix:ndarray, diagonal_matrix:nd
 		return dot(diagonal_matrix, transformation_matrix)
 	else:
 		return transformation_matrix
+
+def deSimone_compression_low_complexity(image, t_matrix, q_matrix, qf, use_qphi, use_np2, np2_type):
+	"""
+	Aplica a compressão de imagem de baixo custo
+	param image: ndarray    -> imagem a ser processada
+	param t_matrix: ndarray -> matriz de transformação
+	param q_matrix: ndarray -> matriz de quantização
+	param qf: int			-> fator de qualidade da compressão
+	param use_qphi: bool	-> aplica o método da De Simone
+	param use_afit: bool	-> aplica o ajuste no passo de quantização
+	param use_np2:  bool	-> aplica o arredondamento em potências de 2
+	param np2_type: str		-> identifica qual o tipo de arredondamento de np2
+	"""
+	h, w = image.shape
+	N = 8
+	S, s = compute_scale_matrix(t_matrix)
+	Z = dot(s.T, s)
+	q_forward, q_backward = encodeQuantiseNDecodeBrahimiB(q_matrix, Z) # Fazer uma função que retorna duas matrizes de quantização (Q_forward e Q_backward) e bpp_aux
+	np2_q_forward = copy(q_forward)
+	np2_q_backward = copy(q_backward)
+	if use_np2:
+		if np2_type == 'O':
+			np2_q_forward = np2_round(q_forward)
+			np2_q_backward = np2_round(q_backward)
+		else:
+			np2_q_forward = np2_ceil(q_forward)
+			np2_q_backward = np2_ceil(q_backward)
+	QPhi_forward = use_q_phi(image, np2_q_forward, qf, N, use_qphi)
+	QPhi_backward = use_q_phi(image, np2_q_backward, qf, N, use_qphi)
+	A = tools.Tools.umount(image, (N, N))# - 128
+	Aprime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', t_matrix, A), t_matrix.T) # forward transform
+	Aprime2 = multiply(divide(Aprime1, QPhi_forward).round(), QPhi_backward) # quantization
+	Aprime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', t_matrix.T, Aprime2), t_matrix) # inverse transform
+	B = tools.Tools.remount(Aprime3, (h, w)) #+ 128
+	B = clip(B, 0, 255)
+	if flag:
+		print(f"\n\nValue of QF: {qf}")
+		print(f"\nVetor diagonal: {s}")
+		print(f"\nMatriz diagonal: {S}")
+		print(f"\nMatriz Q_forward:\n{q_forward}")
+		print(f"\nMatriz Q_backward:\n{q_backward}")
+		print(f"\nMatriz NP2(Q_forward):\n{np2_q_forward}")
+		print(f"\nMatriz NP2(Q_backward):\n{np2_q_backward}")
+		print(f"\nMatriz QPhi_forward:\n{QPhi_forward}")
+		print(f"\nMatriz QPhi_backward:\n{QPhi_backward}")
+		print(f"\nMatriz R:\n{B}")
+	return Aprime2.reshape(h,w), B
 
 def deSimone_compression(image:ndarray, q_phi:bool=False, aproximation:bool=False, brahimi_propose:bool=False, apply_np2:bool=False, np2_type:str='O', transformation_matrix:ndarray=None, quantization_matrix:ndarray=None, quality_factor: int = 50) -> ndarray:
 	if transformation_matrix.any == None or quantization_matrix.any == None:
@@ -350,8 +402,13 @@ datas.update({'option7':{'Title': '[Ĉ, QPhi]', 'QPhi': True, 'AproximateTransfo
 datas.update({'option8':{'Title': '[T, NP2O(QPhif), NP2O(QPhib)]', 'QPhi': True, 'AproximateTransformation': False, 'BrahimeQuantization': True, 'NP2': True, 'PSNR': [], 'SSIM': [], 'BPP': [], 'color': 'b', 'lineStyle': 'dashed'}})
 datas.update({'option9':{'Title': '[T, NP2B(QBf), NP2B(QBb)]', 'QPhi': False, 'AproximateTransformation': False, 'BrahimeQuantization': True, 'NP2': True, 'PSNR': [], 'SSIM': [], 'BPP': [], 'color': 'g', 'lineStyle': 'dashed'}})
 datas.update({'option10':{'Title': '[T, NP2B(QBPhif), NP2B(QBPhib)]', 'QPhi': True, 'AproximateTransformation': False, 'BrahimeQuantization': True, 'NP2': True, 'PSNR': [], 'SSIM': [], 'BPP': [], 'color': 'g', 'lineStyle': 'dashed'}})
+
+datas.update({'option11':{'Title': '[Low-complex1]', 'QPhi': False, 'AproximateTransformation': False, 'BrahimeQuantization': True, 'NP2': True, 'PSNR': [], 'SSIM': [], 'BPP': [], 'color': 'black', 'lineStyle': 'dashed'}})
+datas.update({'option12':{'Title': '[Low-complex2]', 'QPhi': True, 'AproximateTransformation': False, 'BrahimeQuantization': True, 'NP2': True, 'PSNR': [], 'SSIM': [], 'BPP': [], 'color': 'black', 'lineStyle': 'dashed'}})
 # for data in datas:
 	# print(f"{data} - \tQPhi:{datas[data]['QPhi']} \tAproximateTransformation:{datas[data]['AproximateTransformation']} \tBrahimeQuantization:{datas[data]['BrahimeQuantization']} \tNP2:{datas[data]['NP2']}")
+
+flag = 0
 
 quality_factors = list(range(5,96,5))
 for QF in quality_factors:
@@ -404,7 +461,18 @@ for QF in quality_factors:
 	datas['option10']['PSNR'].append(peak_signal_noise_ratio(image, n_image10, data_range=255))
 	datas['option10']['SSIM'].append(structural_similarity(image, n_image10, data_range=255))
 	datas['option10']['BPP'].append(count_nonzero(logical_not(isclose(bpp10, 0))) * 8 / (bpp10.shape[0] * bpp10.shape[1]))
-
+	
+	if QF == 50: flag = 1
+	bpp11, n_image11 = deSimone_compression_low_complexity(image, T0, Q0, QF, datas['option11']['QPhi'], datas['option11']['NP2'], 'O')
+	datas['option11']['PSNR'].append(peak_signal_noise_ratio(image, n_image11, data_range=255))
+	datas['option11']['SSIM'].append(structural_similarity(image, n_image11, data_range=255))
+	datas['option11']['BPP'].append(count_nonzero(logical_not(isclose(bpp11, 0))) * 8 / (bpp11.shape[0] * bpp11.shape[1]))
+	if flag: print(); print(70 * " ="); print()
+	bpp12, n_image12 = deSimone_compression_low_complexity(image, T0, Q0, QF, datas['option12']['QPhi'], datas['option12']['NP2'], 'O')
+	datas['option12']['PSNR'].append(peak_signal_noise_ratio(image, n_image12, data_range=255))
+	datas['option12']['SSIM'].append(structural_similarity(image, n_image12, data_range=255))
+	datas['option12']['BPP'].append(count_nonzero(logical_not(isclose(bpp12, 0))) * 8 / (bpp12.shape[0] * bpp12.shape[1]))
+	flag = 0
 
 for teste in range(4):
 	print("TESTE " + str(teste + 1))
@@ -434,8 +502,10 @@ for teste in range(4):
 	axes[0, 0].plot(quality_factors, datas[data2]['PSNR'], color=datas[data2]['color'], label=datas[data2]['Title'], ls=datas[data2]['lineStyle'])
 	if teste == 2:
 		axes[0, 0].plot(quality_factors, datas['option9']['PSNR'], color=datas['option9']['color'], label=datas['option9']['Title'], ls=datas['option9']['lineStyle'])
+		axes[0, 0].plot(quality_factors, datas['option11']['PSNR'], color=datas['option11']['color'], label=datas['option11']['Title'], ls=datas['option11']['lineStyle'])
 	if teste == 3:
 		axes[0, 0].plot(quality_factors, datas['option10']['PSNR'], color=datas['option10']['color'], label=datas['option10']['Title'], ls=datas['option10']['lineStyle'])
+		axes[0, 0].plot(quality_factors, datas['option12']['PSNR'], color=datas['option12']['color'], label=datas['option12']['Title'], ls=datas['option12']['lineStyle'])
 	axes[0, 0].legend()
 	# Segundo quadrante
 	axes[0, 1].grid(True)
@@ -446,8 +516,10 @@ for teste in range(4):
 	axes[0, 1].plot(quality_factors, datas[data2]['SSIM'], color=datas[data2]['color'], label=datas[data2]['Title'], ls=datas[data2]['lineStyle'])
 	if teste == 2:
 		axes[0, 1].plot(quality_factors, datas['option9']['SSIM'], color=datas['option9']['color'], label=datas['option9']['Title'], ls=datas['option9']['lineStyle'])
+		axes[0, 1].plot(quality_factors, datas['option11']['SSIM'], color=datas['option11']['color'], label=datas['option11']['Title'], ls=datas['option11']['lineStyle'])
 	if teste == 3:
 		axes[0, 1].plot(quality_factors, datas['option10']['SSIM'], color=datas['option10']['color'], label=datas['option10']['Title'], ls=datas['option10']['lineStyle'])
+		axes[0, 1].plot(quality_factors, datas['option12']['SSIM'], color=datas['option12']['color'], label=datas['option12']['Title'], ls=datas['option12']['lineStyle'])
 	axes[0, 1].legend()
 	# Terceiro quadrante
 	axes[1, 0].grid(True)
@@ -458,8 +530,10 @@ for teste in range(4):
 	axes[1, 0].plot(datas[data2]['BPP'], datas[data2]['PSNR'], color=datas[data2]['color'], label=datas[data2]['Title'], ls=datas[data2]['lineStyle'])
 	if teste == 2:
 		axes[1, 0].plot(datas['option9']['BPP'], datas['option9']['PSNR'], color=datas['option9']['color'], label=datas['option9']['Title'], ls=datas['option9']['lineStyle'])
+		axes[1, 0].plot(datas['option11']['BPP'], datas['option11']['PSNR'], color=datas['option11']['color'], label=datas['option11']['Title'], ls=datas['option11']['lineStyle'])
 	if teste == 3:
 		axes[1, 0].plot(datas['option10']['BPP'], datas['option10']['PSNR'], color=datas['option10']['color'], label=datas['option10']['Title'], ls=datas['option10']['lineStyle'])
+		axes[1, 0].plot(datas['option12']['BPP'], datas['option12']['PSNR'], color=datas['option12']['color'], label=datas['option12']['Title'], ls=datas['option12']['lineStyle'])
 	axes[1, 0].legend()
 	# Quarto quadrante
 	axes[1, 1].grid(True)
@@ -470,8 +544,10 @@ for teste in range(4):
 	axes[1, 1].plot(datas[data2]['BPP'], datas[data2]['SSIM'], color=datas[data2]['color'], label=datas[data2]['Title'], ls=datas[data2]['lineStyle'])
 	if teste == 2:
 		axes[1, 1].plot(datas['option9']['BPP'], datas['option9']['SSIM'], color=datas['option9']['color'], label=datas['option9']['Title'], ls=datas['option9']['lineStyle'])
+		axes[1, 1].plot(datas['option11']['BPP'], datas['option11']['SSIM'], color=datas['option11']['color'], label=datas['option11']['Title'], ls=datas['option11']['lineStyle'])
 	if teste == 3:
 		axes[1, 1].plot(datas['option10']['BPP'], datas['option10']['SSIM'], color=datas['option10']['color'], label=datas['option10']['Title'], ls=datas['option10']['lineStyle'])
+		axes[1, 1].plot(datas['option12']['BPP'], datas['option12']['SSIM'], color=datas['option12']['color'], label=datas['option12']['Title'], ls=datas['option12']['lineStyle'])
 	axes[1, 1].legend()
 	fig.tight_layout()
 	plot.show()
