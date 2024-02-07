@@ -320,36 +320,6 @@ def use_aproximation_transform(transformation_matrix:ndarray, diagonal_matrix:nd
 		return dot(diagonal_matrix, transformation_matrix)
 	else:
 		return transformation_matrix
-	
-def use_adjustment_on_quantization(q_matrix, diag_matrix, use_qfit):
-	if use_qfit:
-		return dot(q_matrix)
-
-def deSimone_compression_low_complexity(image, t_matrix, q_matrix, qf, use_qphi, use_qfit, use_np2, np2_type):
-	"""
-	Aplica a compressão de imagem de baixo custo
-	param image: ndarray    -> imagem a ser processada
-	param t_matrix: ndarray -> matriz de transformação
-	param q_matrix: ndarray -> matriz de quantização
-	param qf: int			-> fator de qualidade da compressão
-	param use_qphi: bool	-> aplica o método da De Simone
-	param use_afit: bool	-> aplica o ajuste no passo de quantização
-	param use_np2:  bool	-> aplica o arredondamento em potências de 2
-	param np2_type: str		-> identifica qual o tipo de arredondamento de np2
-	"""
-	h, w = image.shape
-	N = 8
-	S, s = compute_scale_matrix(t_matrix)
-	Z = dot(s.T, s)
-	q_forward, q_backward = encodeQuantiseNDecodeBrahimiB(image, q_matrix, Z, use_np2, np2_type, N) # Fazer uma função que retorna duas matrizes de quantização (Q_forward e Q_backward) e bpp_aux
-	QPhi_forward = use_q_phi(image, q_forward, qf, N, use_qphi)
-	QPhi_backward = use_q_phi(image, q_backward, qf, N, use_qphi)
-	A = tools.Tools.umount(image, (N, N))# - 128
-	Aprime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', t_matrix, A), t_matrix.T) # forward transform
-	Aprime2 = multiply(divide(Aprime1, QPhi_forward).round(), QPhi_backward) # quantization
-	Aprime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', t_matrix.T, Aprime2), t_matrix) # inverse transform
-	B = tools.Tools.remount(Aprime3, (h, w)) #+ 128
-	return Aprime2.reshape(h,w), clip(B, 0, 255) 
 
 def deSimone_compression_low_complexity(image, t_matrix, q_matrix, qf, use_qphi, use_np2, np2_type):
 	"""
