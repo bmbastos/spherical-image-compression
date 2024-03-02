@@ -67,7 +67,7 @@ def build_LUT(image_height:int, N:int=8):
 	max_LUT = asarray(max_LUT)
 	return k_LUT, min_LUT, max_LUT
 
-def QtildeAtEl(k_lut:ndarray, min_lut:ndarray, max_lut:ndarray, el:float32, quantization_matrix:ndarray, QF:int= 50):
+def QtildeAtEl(k_lut:ndarray, min_lut:ndarray, max_lut:ndarray, el:float32, quantization_matrix:ndarray):
 		ks = None
 		el = abs(el) # LUT is mirrored
 		for idx in range(len(k_lut)):
@@ -76,23 +76,23 @@ def QtildeAtEl(k_lut:ndarray, min_lut:ndarray, max_lut:ndarray, el:float32, quan
 		if ks is None and el == 0: ks = k_lut[0]
 		Q = vstack(([quantization_matrix[:,k] for k in ks])).T
 		Q = reshape(Q, quantization_matrix.shape)
-		return asarray(Q) # É transposto?
+		return asarray(Q) 
 
-def prepareQPhi(image:ndarray, quantization_matrix:ndarray, QF:int=50, N = 8):
+def prepareQPhi(image:ndarray, quantization_matrix:ndarray, N = 8):
 	h, w = image.shape
 	k_lut, min_lut, max_lut = build_LUT(h)
 	els = linspace(-pi/2, pi/2, h//N+1)
 	els = 0.5*(els[1:] + els[:-1]) # gets the "central" block elevation
 	QPhi = []
 	for el in els:
-		QPhi.append(QtildeAtEl(k_lut, min_lut, max_lut, el, quantization_matrix, QF))
+		QPhi.append(QtildeAtEl(k_lut, min_lut, max_lut, el, quantization_matrix))
 	QPhi = asarray(QPhi)
 	QPhi = repeat(QPhi, w//N, axis=0)
 	#plot.imshow(tools.Tools.remount(QPhi, (h, w))); plot.show() # plot the quantization matrices map
 	return QPhi
 
 def np2_round(quantization_matrix:matrix) -> matrix:
-	return power(2, log2(quantization_matrix).round())
+	return power(2, around(log2(quantization_matrix)))
 """Função de transformação de uma matriz em uma matriz de potências de dois - Oliveira """
 
 def np2_ceil(quantization_matrix:matrix) -> matrix:
@@ -100,18 +100,10 @@ def np2_ceil(quantization_matrix:matrix) -> matrix:
 """Função de transformação de uma matriz em uma matriz de potências de dois - Brahimi """
 
 def compute_scale_matrix(transformation_matrix:ndarray) -> matrix:
-	if transformation_matrix.shape != (8,8):
-		print("Erro: matrix de trasformação deve ser 8x8 ")
-	else:
-		values = []
-		for row in range(8):
-			count = 0
-			for col in range(8):
-				if transformation_matrix[row,col] != 0:
-					count += 1
-			values.append(1/sqrt(count))
-		scale_matrix = matrix(diag(values)).T
-		return scale_matrix, matrix(diag(scale_matrix))	# Matrix diagonal e elementos da matriz diagonal vetorizados
+	scale_matrix = matrix(sqrt(linalg.inv(dot(transformation_matrix, transformation_matrix.T))))
+	scale_vector = matrix(diag(scale_matrix))
+	return scale_matrix, scale_vector
+"""Matrix diagonal e elementos da matriz diagonal vetorizados"""
 
 def WSSSIM(img1, img2, K1 = .01, K2 = .03, L = 255):
 
@@ -171,26 +163,25 @@ def WSPSNR(img1, img2, max = 255.): # img1 e img2 devem ter shape hx2h e ser em 
 
 """ Estruturas de armazenamento para ratios """
 quality_factors = range(5, 100, 5)
-DCT = {'Label':'DCT' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'black', 'Style':'solid', 'Legend':'DCT'}																# Aplicação da DCT
-RDCT = {'Label':'RDCT' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'black', 'Style':'dashed', 'Legend':'RDCT'}															# Aproximação da DCT
-OLIVEIRA1 = {'Label':'OLIVEIRA1' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'g', 'Style':'solid', 'Legend':'$\operatorname{np2}((\mathbf{Q})_\phi\oslash\mathbf{Z})$'} 		# np2(phi(Q)/Z) Ideal do ponto de vista teórico/matemático
-OLIVEIRA2 = {'Label':'OLIVEIRA2' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'r', 'Style':'solid', 'Legend':'$\operatorname{np2}((\mathbf{Q})\oslash\mathbf{Z})_\phi$'} 		# np2(phi(Q/Z)) Ideal do ponto de vista de implementação
-OLIVEIRA3 = {'Label':'OLIVEIRA3' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'b', 'Style':'dashed', 'Legend':'$(\operatorname{np2}(\mathbf{Q})\oslash\mathbf{Z})_\phi$'} 	# phi(np2(Q/Z)) Ideal do ponto de vista de implementação
-METHODS = [DCT, RDCT, OLIVEIRA1, OLIVEIRA2, OLIVEIRA3]
+DCT = {'Label':'DCT' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'black', 'Style':'solid', 'Legend':'DCT'}																		# Aplicação da DCT
+RDCT = {'Label':'RDCT' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'black', 'Style':'dashed', 'Legend':'RDCT'}																	# Aproximação da DCT
+BRAHIMI1 = {'Label':'BRAHIMI1' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'g', 'Style':'solid', 'Legend':'$\operatorname{np2}((\mathbf{Q})_\phi\oslash\mathbf{Z})$'} 		# np2(phi(Q)/Z) Ideal do ponto de vista teórico/matemático
+BRAHIMI2 = {'Label':'BRAHIMI2' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'r', 'Style':'solid', 'Legend':'$\operatorname{np2}((\mathbf{Q})\oslash\mathbf{Z})_\phi$'} 		# np2(phi(Q/Z)) Ideal do ponto de vista de implementação
+BRAHIMI3 = {'Label':'BRAHIMI3' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'b', 'Style':'dashed', 'Legend':'$(\operatorname{np2}(\mathbf{Q})\oslash\mathbf{Z})_\phi$'} 		# phi(np2(Q/Z)) Ideal do ponto de vista de implementação
+METHODS = [DCT, RDCT, BRAHIMI1, BRAHIMI2, BRAHIMI3]
 DATAS = {
     'DCT': {'PSNR': zeros(len(quality_factors)), 'SSIM': zeros(len(quality_factors)), 'BPP': zeros(len(quality_factors))},
     'RDCT': {'PSNR': zeros(len(quality_factors)), 'SSIM': zeros(len(quality_factors)), 'BPP': zeros(len(quality_factors))},
-    'OLIVEIRA1': {'PSNR': zeros(len(quality_factors)), 'SSIM': zeros(len(quality_factors)), 'BPP': zeros(len(quality_factors))},
-    'OLIVEIRA2': {'PSNR': zeros(len(quality_factors)), 'SSIM': zeros(len(quality_factors)), 'BPP': zeros(len(quality_factors))},
-    'OLIVEIRA3': {'PSNR': zeros(len(quality_factors)), 'SSIM': zeros(len(quality_factors)), 'BPP': zeros(len(quality_factors))}
+    'BRAHIMI1': {'PSNR': zeros(len(quality_factors)), 'SSIM': zeros(len(quality_factors)), 'BPP': zeros(len(quality_factors))},
+    'BRAHIMI2': {'PSNR': zeros(len(quality_factors)), 'SSIM': zeros(len(quality_factors)), 'BPP': zeros(len(quality_factors))},
+    'BRAHIMI3': {'PSNR': zeros(len(quality_factors)), 'SSIM': zeros(len(quality_factors)), 'BPP': zeros(len(quality_factors))}
 }
 
 
 """ Pré processamento de matrizes e vetores """
 T = calculate_matrix_of_transformation(8)
-s_matrix = matrix(sqrt(linalg.inv(dot(TB, TB.T))))
-s_vector = matrix(diag(s_matrix))
-Z1 = dot(s_vector.T, s_vector)
+S, s = compute_scale_matrix(TO)
+Z = dot(s.T, s)
 
 # Início do temporizador
 now = datetime.now()
@@ -200,11 +191,11 @@ second = now.second
 t_start = time()
 
 """ Carregamento da(s) imagem(ns) de teste """
-path_images = "test_images/4K"
+path_images = "Images_for_tests/4K"
 print(f"O processamento começou as {hour} horas, {minute} minutos e {second} segundos")
 file_names = os.listdir(path_images)
 n_images = 0
-for file_name in tqdm(file_names, mininterval=0.00001):
+for file_name in tqdm(file_names):
 	full_path = os.path.join(path_images, file_name)
 	if os.path.isfile(full_path):
 		image = around(255*imread(full_path, as_gray=True))
@@ -214,13 +205,14 @@ for file_name in tqdm(file_names, mininterval=0.00001):
 
 		""" Laço de Processamento """
 		for index, QF in enumerate(quality_factors):
-
+			
 			Q = quantize(QF, QB)
-			Q_f1 = divide(Q, Z1)
-			Q_b1 = multiply(Z1, Q)
+			Q_f = divide(Q, Z)
+			Q_b = multiply(Q, Z)
+
 
 			# DCT
-			QPhi = quantize(QF, prepareQPhi(image, Q0, QF))
+			QPhi = prepareQPhi(image, Q)
 			DctPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T) 					# forward transform
 			DctPrime2 = multiply(around(divide(DctPrime1, QPhi)), QPhi)									# quantization encoding & decoding
 			DctPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, DctPrime2), T) 			# inverse transform
@@ -232,9 +224,9 @@ for file_name in tqdm(file_names, mininterval=0.00001):
 			#plot.imshow(B, cmap='gray'); plot.title(f"DCT - Qf = {QF}") ;plot.show()
 
 			# RDCT
-			Z = tile(asarray([Z1]), (Aprime1.shape[0], 1, 1))
-			QPhi_forward = divide(QPhi, Z)
-			QPhi_backward = multiply(Z, QPhi)
+			Z_tiled = tile(asarray([Z]), (Aprime1.shape[0], 1, 1))
+			QPhi_forward = divide(QPhi, Z_tiled)
+			QPhi_backward = multiply(Z_tiled, QPhi)
 			Aprime2 = multiply(around(divide(Aprime1, QPhi_forward)), QPhi_backward) 					# quantization
 			Aprime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, Aprime2), TB) 			# inverse transform
 			B = clip(Tools.remount(Aprime3, (h, w)), 0, 255) #+ 128
@@ -245,44 +237,41 @@ for file_name in tqdm(file_names, mininterval=0.00001):
 			#plot.imshow(B, cmap='gray'); plot.title(f"RDCT - Qf = {QF}") ;plot.show()
 
 			# QPhi = np2(phi(Q)/Z)
-			QPhi = quantize(QF, prepareQPhi(image, QB, QF))
-			QPhi_forward = divide(QPhi, Z)
-			QPhi_backward = multiply(Z, QPhi)
+			QPhi_forward = divide(QPhi, Z_tiled)
+			QPhi_backward = multiply(QPhi, Z_tiled)
 			Aprime2 = multiply(around(divide(Aprime1, QPhi_forward)), QPhi_backward)					# quantization
 			Aprime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, Aprime2), TB) 			# inverse transform
 			B = clip(Tools.remount(Aprime3, (h, w)), 0, 255) #+ 128
 			Aprime2 = Aprime2.reshape(h, w)
-			DATAS['OLIVEIRA1']['PSNR'][index] += WSPSNR(image, B)
-			DATAS['OLIVEIRA1']['SSIM'][index] += WSSSIM(image, B)
-			DATAS['OLIVEIRA1']['BPP'][index] += count_nonzero(logical_not(isclose(Aprime2, 0))) * 8 / (Aprime2.shape[0]*Aprime2.shape[1])
+			DATAS['BRAHIMI1']['PSNR'][index] += WSPSNR(image, B)
+			DATAS['BRAHIMI1']['SSIM'][index] += WSSSIM(image, B)
+			DATAS['BRAHIMI1']['BPP'][index] += count_nonzero(logical_not(isclose(Aprime2, 0))) * 8 / (Aprime2.shape[0]*Aprime2.shape[1])
 			#plot.imshow(B, cmap='gray'); plot.title(f"np2(phi(Q)/Z) - Qf = {QF}") ;plot.show()
 
 			# QPhi = phi(np2(Q/Z))
-			Q_forward = np2_ceil(divide(Q, Z1))
-			Q_backward = np2_ceil(multiply(Z1, Q))
-			QPhi_forward = prepareQPhi(image, Q_forward, QF)
-			QPhi_backward = prepareQPhi(image, Q_backward, QF)
+			Q_forward = np2_ceil(Q_f)
+			Q_backward = np2_ceil(Q_b)
+			QPhi_forward = prepareQPhi(image, Q_forward)
+			QPhi_backward = prepareQPhi(image, Q_backward)
 			Aprime2 = multiply(around(divide(Aprime1, QPhi_forward)), QPhi_backward) 					# quantization
 			Aprime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, Aprime2), TB) 			# inverse transform
 			B = clip(Tools.remount(Aprime3, (h, w)), 0, 255) #+ 128
 			Aprime2 = Aprime2.reshape(h, w)
-			DATAS['OLIVEIRA2']['PSNR'][index] += WSPSNR(image, B)
-			DATAS['OLIVEIRA2']['SSIM'][index] += WSSSIM(image, B)
-			DATAS['OLIVEIRA2']['BPP'][index] += count_nonzero(logical_not(isclose(Aprime2, 0))) * 8 / (Aprime2.shape[0]*Aprime2.shape[1])
+			DATAS['BRAHIMI2']['PSNR'][index] += WSPSNR(image, B)
+			DATAS['BRAHIMI2']['SSIM'][index] += WSSSIM(image, B)
+			DATAS['BRAHIMI2']['BPP'][index] += count_nonzero(logical_not(isclose(Aprime2, 0))) * 8 / (Aprime2.shape[0]*Aprime2.shape[1])
 			#plot.imshow(B, cmap='gray'); plot.title(f"phi(np2(Q/Z)) - Qf = {QF}") ;plot.show()
 
 			# QPhi = np2(phi(Q/Z))
-			Q_forward = divide(Q, Z1)
-			Q_backward = multiply(Z1, Q)
-			QPhi_forward = np2_ceil(prepareQPhi(image, Q_forward, QF))
-			QPhi_backward = np2_ceil(prepareQPhi(image, Q_backward, QF))
+			QPhi_forward = np2_ceil(prepareQPhi(image, Q_f))
+			QPhi_backward = np2_ceil(prepareQPhi(image, Q_b))
 			Aprime2 = multiply(around(divide(Aprime1, QPhi_forward)), QPhi_backward) 					# quantization
 			Aprime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, Aprime2), TB) 			# inverse transform
 			B = clip(Tools.remount(Aprime3, (h, w)), 0, 255) #+ 128
 			Aprime2 = Aprime2.reshape(h, w)
-			DATAS['OLIVEIRA3']['PSNR'][index] += WSPSNR(image, B)
-			DATAS['OLIVEIRA3']['SSIM'][index] += WSSSIM(image, B)
-			DATAS['OLIVEIRA3']['BPP'][index] += count_nonzero(logical_not(isclose(Aprime2, 0))) * 8 / (Aprime2.shape[0]*Aprime2.shape[1])
+			DATAS['BRAHIMI3']['PSNR'][index] += WSPSNR(image, B)
+			DATAS['BRAHIMI3']['SSIM'][index] += WSSSIM(image, B)
+			DATAS['BRAHIMI3']['BPP'][index] += count_nonzero(logical_not(isclose(Aprime2, 0))) * 8 / (Aprime2.shape[0]*Aprime2.shape[1])
 			#plot.imshow(B, cmap='gray'); plot.title(f"np2(phi(Q/Z)) - Qf = {QF}") ;plot.show()
 		n_images += 1
 
@@ -304,7 +293,7 @@ for key in DATAS:
 
 # Plotagem dos gráficos de curvas
 plot_cols, plot_rows = (2, 2)
-fig, axes = plot.subplots(plot_rows, plot_cols)
+fig, axes = plot.subplots(plot_rows, plot_cols, label="Brahimi propose")
 for row_index_plot in range(plot_rows):
 	for col_index_plot in range(plot_cols):
 		axes[row_index_plot, col_index_plot].grid(True)
