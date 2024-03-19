@@ -1,15 +1,16 @@
 import os
-from matrix import *
+from matrixes import *
+from tools import *
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from skimage.io import imread
 from scipy import signal
 from pdb import set_trace as pause
 from matplotlib import pyplot as plot
 from time import time
-from tools import *
 from datetime import datetime
 from tqdm import tqdm
 
+pause()
 """ Definição das funções auxiliares """
 def quantize(quality_factor:int, quantization_matrix:ndarray) -> ndarray:
 	s = 0.0
@@ -166,7 +167,7 @@ quality_factors = range(5, 100, 5)
 DCT = {'Label':'DCT' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'black', 'Style':'solid', 'Legend':'DCT'}																		# Aplicação da DCT
 RDCT = {'Label':'RDCT' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'black', 'Style':'dashed', 'Legend':'RDCT'}																	# Aproximação da DCT
 BRAHIMI1 = {'Label':'BRAHIMI1' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'g', 'Style':'solid', 'Legend':'$\operatorname{np2}((\mathbf{Q})_\phi\oslash\mathbf{Z})$'} 		# np2(phi(Q)/Z) Ideal do ponto de vista teórico/matemático
-BRAHIMI2 = {'Label':'BRAHIMI2' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'r', 'Style':'solid', 'Legend':'$\operatorname{np2}((\mathbf{Q})\oslash\mathbf{Z})_\phi$'} 		# np2(phi(Q/Z)) Ideal do ponto de vista de implementação
+BRAHIMI2 = {'Label':'BRAHIMI2' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'r', 'Style':'solid', 'Legend':'$\operatorname{np2}((\mathbf{Q}\oslash\mathbf{Z})_\phi)$'} 		# np2(phi(Q/Z)) Ideal do ponto de vista de implementação
 BRAHIMI3 = {'Label':'BRAHIMI3' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'b', 'Style':'dashed', 'Legend':'$(\operatorname{np2}(\mathbf{Q})\oslash\mathbf{Z})_\phi$'} 		# phi(np2(Q/Z)) Ideal do ponto de vista de implementação
 METHODS = [DCT, RDCT, BRAHIMI1, BRAHIMI2, BRAHIMI3]
 DATAS = {
@@ -180,9 +181,9 @@ DATAS = {
 
 """ Pré processamento de matrizes e vetores """
 T = calculate_matrix_of_transformation(8)
-S, s = compute_scale_matrix(TO)
+S, s = compute_scale_matrix(TB)
 Z = dot(s.T, s)
-
+pause()
 # Início do temporizador
 now = datetime.now()
 hour = now.hour
@@ -195,7 +196,7 @@ path_images = "Images_for_tests/4K"
 print(f"O processamento começou as {hour} horas, {minute} minutos e {second} segundos")
 file_names = os.listdir(path_images)
 n_images = 0
-for file_name in tqdm(file_names):
+for file_name in tqdm(file_names[:1]):
 	full_path = os.path.join(path_images, file_name)
 	if os.path.isfile(full_path):
 		image = around(255*imread(full_path, as_gray=True))
@@ -210,16 +211,15 @@ for file_name in tqdm(file_names):
 			Q_f = divide(Q, Z)
 			Q_b = multiply(Q, Z)
 
-
 			# DCT
 			QPhi = prepareQPhi(image, Q)
 			DctPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T) 					# forward transform
 			DctPrime2 = multiply(around(divide(DctPrime1, QPhi)), QPhi)									# quantization encoding & decoding
 			DctPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, DctPrime2), T) 			# inverse transform
-			B = clip(Tools.remount(DctPrime3, (h, w)), 0, 255)
+			i_dct = clip(Tools.remount(DctPrime3, (h, w)), 0, 255)
 			DctPrime2 = DctPrime2.reshape(h, w)
-			DATAS['DCT']['PSNR'][index] += WSPSNR(image, B)
-			DATAS['DCT']['SSIM'][index] += WSSSIM(image, B)
+			DATAS['DCT']['PSNR'][index] += WSPSNR(image, i_dct)
+			DATAS['DCT']['SSIM'][index] += WSSSIM(image, i_dct)
 			DATAS['DCT']['BPP'][index] += count_nonzero(logical_not(isclose(DctPrime2, 0))) * 8 / (DctPrime2.shape[0]*DctPrime2.shape[1])
 			#plot.imshow(B, cmap='gray'); plot.title(f"DCT - Qf = {QF}") ;plot.show()
 
@@ -227,25 +227,25 @@ for file_name in tqdm(file_names):
 			Z_tiled = tile(asarray([Z]), (Aprime1.shape[0], 1, 1))
 			QPhi_forward = divide(QPhi, Z_tiled)
 			QPhi_backward = multiply(Z_tiled, QPhi)
-			Aprime2 = multiply(around(divide(Aprime1, QPhi_forward)), QPhi_backward) 					# quantization
-			Aprime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, Aprime2), TB) 			# inverse transform
-			B = clip(Tools.remount(Aprime3, (h, w)), 0, 255) #+ 128
-			Aprime2 = Aprime2.reshape(h, w)
-			DATAS['RDCT']['PSNR'][index] += WSPSNR(image, B)
-			DATAS['RDCT']['SSIM'][index] += WSSSIM(image, B)
-			DATAS['RDCT']['BPP'][index] += count_nonzero(logical_not(isclose(Aprime2, 0))) * 8 / (Aprime2.shape[0]*Aprime2.shape[1])
+			RdctPrime2 = multiply(around(divide(Aprime1, QPhi_forward)), QPhi_backward) 					# quantization
+			RdctPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, RdctPrime2), TB) 			# inverse transform
+			i_rdct = clip(Tools.remount(RdctPrime3, (h, w)), 0, 255) #+ 128
+			RdctPrime2 = RdctPrime2.reshape(h, w)
+			DATAS['RDCT']['PSNR'][index] += WSPSNR(image, i_rdct)
+			DATAS['RDCT']['SSIM'][index] += WSSSIM(image, i_rdct)
+			DATAS['RDCT']['BPP'][index] += count_nonzero(logical_not(isclose(RdctPrime2, 0))) * 8 / (RdctPrime2.shape[0]*RdctPrime2.shape[1])
 			#plot.imshow(B, cmap='gray'); plot.title(f"RDCT - Qf = {QF}") ;plot.show()
 
 			# QPhi = np2(phi(Q)/Z)
 			QPhi_forward = divide(QPhi, Z_tiled)
 			QPhi_backward = multiply(QPhi, Z_tiled)
-			Aprime2 = multiply(around(divide(Aprime1, QPhi_forward)), QPhi_backward)					# quantization
-			Aprime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, Aprime2), TB) 			# inverse transform
-			B = clip(Tools.remount(Aprime3, (h, w)), 0, 255) #+ 128
-			Aprime2 = Aprime2.reshape(h, w)
-			DATAS['BRAHIMI1']['PSNR'][index] += WSPSNR(image, B)
-			DATAS['BRAHIMI1']['SSIM'][index] += WSSSIM(image, B)
-			DATAS['BRAHIMI1']['BPP'][index] += count_nonzero(logical_not(isclose(Aprime2, 0))) * 8 / (Aprime2.shape[0]*Aprime2.shape[1])
+			Brahimi1Prime2 = multiply(around(divide(Aprime1, QPhi_forward)), QPhi_backward)					# quantization
+			Brahimi1Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, Brahimi1Prime2), TB) 			# inverse transform
+			i_brahimi1 = clip(Tools.remount(Brahimi1Prime3, (h, w)), 0, 255) #+ 128
+			Brahimi1Prime2 = Brahimi1Prime2.reshape(h, w)
+			DATAS['BRAHIMI1']['PSNR'][index] += WSPSNR(image, i_brahimi1)
+			DATAS['BRAHIMI1']['SSIM'][index] += WSSSIM(image, i_brahimi1)
+			DATAS['BRAHIMI1']['BPP'][index] += count_nonzero(logical_not(isclose(Brahimi1Prime2, 0))) * 8 / (Brahimi1Prime2.shape[0]*Brahimi1Prime2.shape[1])
 			#plot.imshow(B, cmap='gray'); plot.title(f"np2(phi(Q)/Z) - Qf = {QF}") ;plot.show()
 
 			# QPhi = phi(np2(Q/Z))
@@ -253,26 +253,27 @@ for file_name in tqdm(file_names):
 			Q_backward = np2_ceil(Q_b)
 			QPhi_forward = prepareQPhi(image, Q_forward)
 			QPhi_backward = prepareQPhi(image, Q_backward)
-			Aprime2 = multiply(around(divide(Aprime1, QPhi_forward)), QPhi_backward) 					# quantization
-			Aprime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, Aprime2), TB) 			# inverse transform
-			B = clip(Tools.remount(Aprime3, (h, w)), 0, 255) #+ 128
-			Aprime2 = Aprime2.reshape(h, w)
-			DATAS['BRAHIMI2']['PSNR'][index] += WSPSNR(image, B)
-			DATAS['BRAHIMI2']['SSIM'][index] += WSSSIM(image, B)
-			DATAS['BRAHIMI2']['BPP'][index] += count_nonzero(logical_not(isclose(Aprime2, 0))) * 8 / (Aprime2.shape[0]*Aprime2.shape[1])
+			Brahimi2Prime2 = multiply(around(divide(Aprime1, QPhi_forward)), QPhi_backward) 					# quantization
+			Brahimi2Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, Brahimi2Prime2), TB) 			# inverse transform
+			i_brahimi2 = clip(Tools.remount(Brahimi2Prime3, (h, w)), 0, 255) #+ 128
+			Brahimi2Prime2 = Brahimi2Prime2.reshape(h, w)
+			DATAS['BRAHIMI2']['PSNR'][index] += WSPSNR(image, i_brahimi2)
+			DATAS['BRAHIMI2']['SSIM'][index] += WSSSIM(image, i_brahimi2)
+			DATAS['BRAHIMI2']['BPP'][index] += count_nonzero(logical_not(isclose(Brahimi2Prime2, 0))) * 8 / (Brahimi2Prime2.shape[0]*Brahimi2Prime2.shape[1])
 			#plot.imshow(B, cmap='gray'); plot.title(f"phi(np2(Q/Z)) - Qf = {QF}") ;plot.show()
 
 			# QPhi = np2(phi(Q/Z))
 			QPhi_forward = np2_ceil(prepareQPhi(image, Q_f))
 			QPhi_backward = np2_ceil(prepareQPhi(image, Q_b))
-			Aprime2 = multiply(around(divide(Aprime1, QPhi_forward)), QPhi_backward) 					# quantization
-			Aprime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, Aprime2), TB) 			# inverse transform
-			B = clip(Tools.remount(Aprime3, (h, w)), 0, 255) #+ 128
-			Aprime2 = Aprime2.reshape(h, w)
-			DATAS['BRAHIMI3']['PSNR'][index] += WSPSNR(image, B)
-			DATAS['BRAHIMI3']['SSIM'][index] += WSSSIM(image, B)
-			DATAS['BRAHIMI3']['BPP'][index] += count_nonzero(logical_not(isclose(Aprime2, 0))) * 8 / (Aprime2.shape[0]*Aprime2.shape[1])
+			Brahimi3Prime2 = multiply(around(divide(Aprime1, QPhi_forward)), QPhi_backward) 					# quantization
+			Brahimi3Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, Brahimi3Prime2), TB) 			# inverse transform
+			i_brahimi3 = clip(Tools.remount(Brahimi3Prime3, (h, w)), 0, 255) #+ 128
+			Brahimi3Prime2 = Brahimi3Prime2.reshape(h, w)
+			DATAS['BRAHIMI3']['PSNR'][index] += WSPSNR(image, i_brahimi3)
+			DATAS['BRAHIMI3']['SSIM'][index] += WSSSIM(image, i_brahimi3)
+			DATAS['BRAHIMI3']['BPP'][index] += count_nonzero(logical_not(isclose(Brahimi3Prime2, 0))) * 8 / (Brahimi3Prime2.shape[0]*Brahimi3Prime2.shape[1])
 			#plot.imshow(B, cmap='gray'); plot.title(f"np2(phi(Q/Z)) - Qf = {QF}") ;plot.show()
+			
 		n_images += 1
 
 # Cálculo do tempo de processamento

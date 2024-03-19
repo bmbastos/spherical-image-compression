@@ -1,5 +1,5 @@
 import os
-from matrix import *
+from matrixes import *
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from skimage.io import imread
 from scipy import signal
@@ -166,7 +166,7 @@ quality_factors = range(5, 100, 5)
 DCT = {'Label':'DCT' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'black', 'Style':'solid', 'Legend':'DCT'}																		# Aplicação da DCT
 RDCT = {'Label':'RDCT' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'black', 'Style':'dashed', 'Legend':'RDCT'}																	# Aproximação da DCT
 OLIVEIRA1 = {'Label':'OLIVEIRA1' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'g', 'Style':'solid', 'Legend':'$\operatorname{np2}((\mathbf{Q})_\phi\oslash\mathbf{Z})$'} 		# np2(phi(Q)/Z) Ideal do ponto de vista teórico/matemático
-OLIVEIRA2 = {'Label':'OLIVEIRA2' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'r', 'Style':'solid', 'Legend':'$\operatorname{np2}((\mathbf{Q})\oslash\mathbf{Z})_\phi$'} 		# np2(phi(Q/Z)) Ideal do ponto de vista de implementação
+OLIVEIRA2 = {'Label':'OLIVEIRA2' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'r', 'Style':'solid', 'Legend':'$\operatorname{np2}((\mathbf{Q}\oslash\mathbf{Z})_\phi)$'} 		# np2(phi(Q/Z)) Ideal do ponto de vista de implementação
 OLIVEIRA3 = {'Label':'OLIVEIRA3' ,'PSNR':[], 'SSIM':[], 'BPP':[], 'Color':'b', 'Style':'dashed', 'Legend':'$(\operatorname{np2}(\mathbf{Q})\oslash\mathbf{Z})_\phi$'} 		# phi(np2(Q/Z)) Ideal do ponto de vista de implementação
 METHODS = [DCT, RDCT, OLIVEIRA1, OLIVEIRA2, OLIVEIRA3]
 DATAS = {
