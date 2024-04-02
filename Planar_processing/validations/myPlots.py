@@ -51,7 +51,7 @@ def averages(data_set: list, methods: list) -> dict:
 	
 
 # __MAIN__#
-target_file = 'permute_np2.csv'
+target_file = 'standards.csv'
 dataset, methods = pre_prossesing(target_file)
 methods = list(sort(methods))
 index_of_dct = methods.index('DCT')
@@ -61,13 +61,13 @@ fig = plot.figure(label=target_file)
 ax1 = fig.add_axes([0.1, 0.1 , 0.4, 0.8])
 ax2 = fig.add_axes([0.55, 0.1 , 0.4, 0.8])
 for avg in avgs:
-	ax1.plot(avgs[avg]['BPP'], avgs[avg]['PSNR'], color = avgs[avg]['Color'], ls=avgs[avg]['Style'], label=avg,)
+	ax1.plot(avgs[avg]['BPP'], avgs[avg]['PSNR'], marker='o', color = avgs[avg]['Color'], ls=avgs[avg]['Style'], label=avg)
 	ax1.grid(True)
 	ax1.set_xlabel('BPP'); ax1.set_ylabel('PSNR')
 	ax1.set_xlim(0, 6)
-	ax1.set_ylim(10, 50)
+	ax1.set_ylim(5, 45)
 	ax1.legend(methods)
-	ax2.plot(avgs[avg]['BPP'], avgs[avg]['SSIM'], color = avgs[avg]['Color'], ls=avgs[avg]['Style'], label=avg)
+	ax2.plot(avgs[avg]['BPP'], avgs[avg]['SSIM'], marker='o', color = avgs[avg]['Color'], ls=avgs[avg]['Style'], label=avg)
 	ax2.grid(True)
 	ax2.set_xlabel('BPP'); ax2.set_ylabel('SSIM')
 	ax2.set_xlim(0, 6)

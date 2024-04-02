@@ -99,9 +99,6 @@ for file in tqdm(files):
 			# Quantização padrão do JPEG
 			QOliveira = quantize(QF, Q0)
 			QBrahimi = quantize(QF, QB)
-			
-			QOliveiraRounded = np2_round(QOliveira)
-			QBrahimiCeiled = np2_ceil(QBrahimi)
 
 			## DCT
 			DctPrime2 = multiply(around(divide(DctPrime1, QOliveira)), QOliveira)
