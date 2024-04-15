@@ -91,9 +91,10 @@ for file in tqdm(files):
 		Aprime1Oliveira = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO, A), TO.T)
 		Aprime1Brahimi = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB, A), TB.T)
 		
-		BUFFER = {'DCT': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+		BUFFER = {'JPEG': {'PSNR':[], 'SSIM':[], 'BPP':[]},
 			'OLIVEIRA': {'PSNR':[], 'SSIM':[], 'BPP':[]}, 
 			'BRAHIMI': {'PSNR':[], 'SSIM':[], 'BPP':[]}}
+		
 		# Laço de processamento dos diferentes métodos
 		for QF in quality_factors:
 			# Quantização padrão do JPEG
@@ -113,17 +114,17 @@ for file in tqdm(files):
 			#DATAS['DCT']['PSNR'][index] += peak_signal_noise_ratio(image, B, data_range=255)
 			#DATAS['DCT']['SSIM'][index] += structural_similarity(image, B, data_range=255)
 			#DATAS['DCT']['BPP'][index] += bpp(DctPrime2)
-			BUFFER['DCT']['PSNR'].append(peak_signal_noise_ratio(image, B, data_range=255))
-			BUFFER['DCT']['SSIM'].append(structural_similarity(image, B, data_range=255))
-			BUFFER['DCT']['BPP'].append(bpp(DctPrime2))
-			plot.imshow(B, cmap='gray')
-			plot.title(f'DCT ({QF})')
+			BUFFER['JPEG']['PSNR'].append(peak_signal_noise_ratio(image, B, data_range=255))
+			BUFFER['JPEG']['SSIM'].append(structural_similarity(image, B, data_range=255))
+			BUFFER['JPEG']['BPP'].append(bpp(DctPrime2))
+			#plot.imshow(B, cmap='gray')
+			#plot.title(f'DCT ({QF})')
 			#plot.show()
 
 			# Proposta do Oliveira (TO|QO|NP2ROUND)
 			QO_forward = tile(asarray([np2_round(Qf_Oliveira)]), (Aprime1Oliveira.shape[0], 1, 1))
 			QO_backward = tile(asarray([np2_round(Qb_Oliveira)]), (Aprime1Oliveira.shape[0], 1, 1))
-			OliveiraPrime2 = multiply(around(divide(Aprime1Oliveira, QO_forward)), QO_backward)									# È necessário o around porque a trnasformação resulta em coeficientes não inteiros
+			OliveiraPrime2 = multiply(around(divide(Aprime1Oliveira, QO_forward)), QO_backward)
 			OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
 			C = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255) #+ 128
 			OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
@@ -133,14 +134,15 @@ for file in tqdm(files):
 			BUFFER['OLIVEIRA']['PSNR'].append(peak_signal_noise_ratio(image, C, data_range=255))
 			BUFFER['OLIVEIRA']['SSIM'].append(structural_similarity(image, C, data_range=255))
 			BUFFER['OLIVEIRA']['BPP'].append(bpp(OliveiraPrime2))
-			plot.imshow(C, cmap='gray')
-			plot.title(f'Oliveira ({QF})')
+			#plot.imshow(C, cmap='gray')
+			#plot.title(f'Oliveira ({QF})')
 			#plot.show()
 			
 			# Proposta da Brahimi (TB|QB|NP2CEIL)
+			# AQUI Concluimos que a proposta da Brahimi não funciona para qualquer QF
 			QB_forward = tile(asarray([np2_ceil(Qf_Brahimi)]), (Aprime1Brahimi.shape[0], 1, 1))
 			QB_backward = tile(asarray([np2_ceil(Qb_Brahimi)]), (Aprime1Brahimi.shape[0], 1, 1))
-			BrahimiPrime2 = multiply(around(divide(Aprime1Brahimi, QB_forward)), QB_backward)									# È necessário o around porque a trnasformação resulta em coeficientes não inteiros
+			BrahimiPrime2 = multiply(around(divide(Aprime1Brahimi, QB_forward)), QB_backward)
 			BrahimiPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, BrahimiPrime2), TB)
 			D = clip(Tools.remount(BrahimiPrime3, (h, w)), 0, 255) #+ 128
 			BrahimiPrime2 = BrahimiPrime2.reshape(h, w)
@@ -150,15 +152,14 @@ for file in tqdm(files):
 			BUFFER['BRAHIMI']['PSNR'].append(peak_signal_noise_ratio(image, D, data_range=255))
 			BUFFER['BRAHIMI']['SSIM'].append(structural_similarity(image, D, data_range=255))
 			BUFFER['BRAHIMI']['BPP'].append(bpp(BrahimiPrime2))
-			plot.imshow(D, cmap='gray')
-			plot.title(f'Brahimi ({QF})')
-			if QF == 50: pause()
-		
+			#plot.imshow(D, cmap='gray')
+			#plot.title(f'Brahimi ({QF})')
+			#plot.show()
 			
 
-		results.append({'File name':file, 'Method':'DCT', 'PSNR':BUFFER['DCT']['PSNR'], 'SSIM':BUFFER['DCT']['SSIM'], 'BPP':BUFFER['DCT']['BPP']})
-		results.append({'File name':file, 'Method':'Oliveira propose', 'PSNR':BUFFER['OLIVEIRA']['PSNR'], 'SSIM':BUFFER['OLIVEIRA']['SSIM'], 'BPP':BUFFER['OLIVEIRA']['BPP']})
-		results.append({'File name':file, 'Method':'Brahimi propose', 'PSNR':BUFFER['BRAHIMI']['PSNR'], 'SSIM':BUFFER['BRAHIMI']['SSIM'], 'BPP':BUFFER['BRAHIMI']['BPP']})
+		results.append({'File name':file, 'Method':"JPEG", 'PSNR':BUFFER['JPEG']['PSNR'], 'SSIM':BUFFER['JPEG']['SSIM'], 'BPP':BUFFER['JPEG']['BPP']})
+		results.append({'File name':file, 'Method':"Oliveira's proposal", 'PSNR':BUFFER['OLIVEIRA']['PSNR'], 'SSIM':BUFFER['OLIVEIRA']['SSIM'], 'BPP':BUFFER['OLIVEIRA']['BPP']})
+		results.append({'File name':file, 'Method':"Brahimi's proposal", 'PSNR':BUFFER['BRAHIMI']['PSNR'], 'SSIM':BUFFER['BRAHIMI']['SSIM'], 'BPP':BUFFER['BRAHIMI']['BPP']})
 
 		n_images += 1
 

@@ -1,11 +1,14 @@
 import os
+import pandas as pd
 from numpy import *
 from time import time
 from skimage.io import imread
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
+from scipy import signal
 from matplotlib import pyplot as plot
 from pdb import set_trace as pause
-import tools
+from matrixes import *
+from tools import *
 
 """
 Principal implementação onde será embedado as ideias de compressão de imagens
@@ -14,7 +17,6 @@ visando a minimização do custo para imagens omnidirecionais
 
 # DEFINIÇÃO DE FUNÇÕES
 
-# Realiza o cálculo de uma matriz de tranformação para JPEG com base no tamanho 'k' do bloco
 def calculate_matrix_of_transformation(k:int) -> ndarray:
 	row = 0
 	alpha = 0.0
@@ -30,9 +32,10 @@ def calculate_matrix_of_transformation(k:int) -> ndarray:
 			col += 1
 		row += 1
 	return transformation_matrix
+""" Calcula a matriz de transformação com base no tamanho do bloco """
 
 # Aplicação do fator de quantização com base no QF (Quality-factor) e na matriz usada
-def quantization(quality_factor:int, quantization_matrix:ndarray) -> ndarray:
+def quantize(quality_factor:int, quantization_matrix:ndarray) -> ndarray:
 	s = 0.0
 	if quality_factor < 50:
 		s = 5_000 / quality_factor
@@ -40,165 +43,26 @@ def quantization(quality_factor:int, quantization_matrix:ndarray) -> ndarray:
 		s = 200 - (2 * quality_factor)
 	resulting_matrix = floor((s * quantization_matrix + 50) / 100)
 	return resulting_matrix
+""" Calcula a matriz de quantização dado um fator de quantização """
 
-# Aplicação da transformada exata 
-def apply_exact_transform(transformation_matrix:ndarray, image:ndarray, k:int) -> ndarray:
-	nrows, ncols = image.shape
-	dct_image = zeros((nrows, ncols), dtype=float32)
-	row = 0
-	while(row < nrows):
-		col = 0
-		while(col < ncols):
-			dct_image[row:row+k, col:col+k] = dot(dot(transformation_matrix, image[row:row+k, col:col+k]), transformation_matrix.T)
-			col += k
-		row += k
-	return dct_image
-
-# Aplicação da transformada inversa
-def apply_inverse_transform(transformation_matrix:ndarray, quantized_image:ndarray, k:int) -> ndarray:
-	nrows, ncols = quantized_image.shape
-	idct_image = zeros((nrows, ncols), dtype=float32)
-	row = 0
-	while(row < nrows):
-		col = 0
-		while(col < ncols):
-			idct_image[row:row+k, col:col+k] = dot(dot(transformation_matrix.T, quantized_image[row:row+k, col:col+k]), transformation_matrix)
-			col += k
-		row += k
-	return clip(idct_image, 0, 255)
-
-# Aplica a quantização padrão JPEG
-def apply_quantization(quantization_matrix:ndarray, dct_image:ndarray, k:int) -> ndarray:
-	nrows, ncols = dct_image.shape
-	quantized_image = zeros((nrows, ncols), dtype=float32)
-	row = 0
-	while(row < nrows):
-		col = 0
-		while(col < ncols):
-			quantized_image[row:row+k, col:col+k] = multiply(around(divide(dct_image[row:row+k, col:col+k], quantization_matrix)), quantization_matrix)
-			col += k
-		row += k
-	return quantized_image
-
-# Aplica a quantização sugerida por oliveira
-def apply_oliveira_quantization(q_f_matrix:matrix, q_i_matrix:matrix, dct_image:ndarray, k:int) -> matrix:
-	nrows, ncols = dct_image.shape
-	quantized_image = zeros((nrows, ncols), dtype=float32)
-	row = 0
-	while(row < nrows):
-		col = 0
-		while(col < ncols):
-			quantized_image[row:row+k, col:col+k] = multiply(round(divide(dct_image[row:row+k, col:col+k], q_f_matrix)), q_i_matrix)
-			col += k
-		row += k
-	return quantized_image
-
-# Calcula a quantidade de bits por pixel de uma imagem
-def calculate_bpp(image:ndarray) -> int:
-	nbytes = 0
-	nrows = image.shape[0]
-	row = 0
-	while row < nrows:
-		result = isclose(image[row], 0)
-		nbytes = nbytes + count_nonzero(logical_not(result))
-		row += 1
-	bpp = (nbytes * 8) / (image.shape[0] * image.shape[1])	# Oito (8) é a quantidade de bits que representam cada pixel da imagem
-	return bpp
-
-# Função de transformação de uma matriz em uma matriz de potências de dois - Oliveira
-def np2_round(quantization_matrix:matrix) -> matrix:
-	return power(2, log2(quantization_matrix).round())
-
-# Função de transformação de uma matriz em uma matriz de potências de dois - Brahimi 
-def np2_ceil(quantization_matrix:matrix) -> matrix:
-	return power(2, ceil(log2(quantization_matrix)))
+def bpp(quantized_image:ndarray):
+	return count_nonzero(logical_not(isclose(quantized_image, 0))) * 8 / (quantized_image.shape[0]*quantized_image.shape[1])
+""" Calcula a quantos bits são necessário por pixel"""
 
 def compute_scale_matrix(transformation_matrix:ndarray) -> matrix:
-	if transformation_matrix.shape != (8,8):
-		print("Erro: matrix de trasformação deve ser 8x8 ")
-	else:
-		values = []
-		for row in range(8):
-			count = 0
-			for col in range(8):
-				if transformation_matrix[row,col] != 0:
-					count += 1
-			values.append(1/sqrt(count))
-		scale_matrix = matrix(diag(values)).T
-		return scale_matrix, matrix(diag(scale_matrix))	# Matrix diagonal e elementos da matriz diagonal vetorizados
+	scale_matrix = matrix(sqrt(linalg.inv(dot(transformation_matrix, transformation_matrix.T))))
+	scale_vector = matrix(diag(scale_matrix))
+	return scale_matrix, scale_vector
+""" Matrix diagonal e elementos da matriz diagonal vetorizados """
 
-# Função que calcula a quantidade de bits por pixels
-def calculate_number_of_bytes_of_image_per_pixels(image:ndarray) -> int:
-	nbytes = 0
-	nrows = image.shape[0]
-	row = 0
-	while row < nrows:
-		result = isclose(image[row], 0)
-		nbytes = nbytes + count_nonzero(logical_not(result))
-		row += 1
-	bpp = (nbytes * 8) / (image.shape[0] * image.shape[1])	# Oito (8) é a quantidade de bits que representam cada pixel da imagem
-	return bpp
+def np2_round(quantization_matrix:matrix) -> matrix:
+	return power(2, around(log2(quantization_matrix)))
+""" Função que calcula as potencias de dois mais próximas de uma dada matriz - Oliveira """
 
+def np2_ceil(quantization_matrix:matrix) -> matrix:
+	return power(2, ceil(log2(quantization_matrix)))
+"""Função de transformação de uma matriz em uma matriz de potências de dois - Brahimi """
 
-# DEFINIÇÕES DE CONSTANTES 
-
-# Matriz de amostra para testes
-A = array([[127, 123, 125, 120, 126, 123, 127, 128,],
-            [142, 135, 144, 143, 140, 145, 142, 140,],
-            [128, 126, 128, 122, 125, 125, 122, 129,],
-            [132, 144, 144, 139, 140, 149, 140, 142,],
-            [128, 124, 128, 126, 127, 120, 128, 129,],
-            [133, 142, 141, 141, 143, 140, 146, 138,],
-            [124, 127, 128, 129, 121, 128, 129, 128,],
-            [134, 143, 140, 139, 136, 140, 138, 141,]], dtype=float)
-
-# Matrizes de transformação
-# Matriz de tranformação JPEG
-T = calculate_matrix_of_transformation(8)
-
-# Ternária padrão
-T0 = array([[1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 0, 0, -1, -1, -1],
-            [1, 0, 0, -1, -1, 0, 0, 1],
-            [1, 0, -1, -1, 1, 1, 0, -1],
-            [1, -1, -1, 1, 1, -1, -1, 1],
-            [1, -1, 0, 1, -1, 0, 1, -1],
-            [0, -1, 1, 0, 0, 1, -1, 0],
-            [0, -1, 1, -1, 1, -1, 1, 0]], dtype=float)
-
-# Ternária Brahimi
-TB = array([[1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 0, 0, 0, 0, -1, -1],
-            [1, 0, 0, -1,- 1, 0, 0, 1],
-            [0, 0, -1, 0, 0, 1, 0, 0],
-            [1, -1, -1, 1, 1, -1, -1, 1],
-            [1, -1, 0, 0, 0, 0, 1, -1],
-            [0, -1, 1, 0, 0, 1, -1, 0],
-            [0, 0, 0, -1, 1, 0, 0, 0]], dtype=float)
-
-# Matrizes de quantização
-# Matriz de quantização Q0 (JPEG quantisation requires bit-shifts only - Oliveira)
-Q0 = array([[16, 11, 10, 16, 24, 40, 51, 61], 
-            [12, 12, 14, 19, 26, 58, 60, 55],
-            [14, 13, 16, 24, 40, 57, 69, 56],
-            [14, 17, 22, 29, 51, 87, 80, 62],
-            [18, 22, 37, 56, 68, 109, 103, 77],
-            [24, 35, 55, 64, 81, 104, 113, 92],
-            [49, 64, 78, 87, 103, 121, 120, 101],
-            [72, 92, 95, 98, 112, 100, 103, 99]], dtype=float)
-
-# Matriz de quantização (Designing Multiplier-Less JPEG Luminance Quantisation Matrix - Brahimi)
-QB = array([[20, 17, 18, 19, 22, 36, 36, 31],
-    		[19, 17, 20, 22, 24, 40, 23, 40],
-      		[20, 22, 24, 28, 37, 53, 50, 54],
-			[22, 20, 25, 35, 45, 73, 73, 58],
-			[22, 21, 37, 74, 70, 92, 101, 103],
-			[24, 43, 50, 64, 100, 104, 120, 92],
-			[45, 100, 62, 79, 100, 70, 70, 101],
-			[41, 41, 74, 59, 70, 90, 100, 99]], dtype=float)
-
-
-#TODO Fazer uma função que recebe uma matriz de quantização, uma elevação 'el' e um fator de qualidade 'qf'
 def map_k_and_el(row_index:int, image_height:int) -> tuple:
 	el = row_index/image_height * pi - pi/2
 	kprime = arange(8)
@@ -206,7 +70,7 @@ def map_k_and_el(row_index:int, image_height:int) -> tuple:
 	return (k, el)
 
 # Constroi a Look-up-table da imagem com base em sua altura
-def build_LUT(image_height:int, N:int=8) -> (ndarray, ndarray, ndarray):
+def build_LUT(image_height:int, N:int=8) -> tuple:
 	ks, els = [], []
 
 	for row_index in range(0, image_height+1, N):
@@ -244,7 +108,7 @@ def printLUT(k_lut:ndarray, min_lut:ndarray, max_lut:ndarray):
 def QtildeAtEl(k_lut:ndarray, min_lut:ndarray, max_lut:ndarray, el:float32, quantization_matrix:ndarray, QF:int= 50):
 		ks = None
 		Q = []
-		QM = quantization(QF, quantization_matrix)
+		QM = quantize(QF, quantization_matrix)
 		el = abs(el) # LUT is mirrored
 		for idx in range(len(k_lut)):
 			if el >= min_lut[idx] and el < max_lut[idx]: 
@@ -258,11 +122,11 @@ def QtildeAtEl(k_lut:ndarray, min_lut:ndarray, max_lut:ndarray, el:float32, quan
 
 def encodeQuantiseNDecode(image:ndarray, transformation_matrix:ndarray, quantization_matrix:ndarray, N = 8):
 	h, w = image.shape
-	A = tools.Tools.umount(image, (N, N))# - 128
+	A = Tools.umount(image, (N, N))# - 128
 	Aprime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', transformation_matrix, A), transformation_matrix.T) # forward transform
 	Aprime2 = multiply(quantization_matrix, around(divide(Aprime1, quantization_matrix))) # quantization
 	Aprime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', transformation_matrix.T, Aprime2), transformation_matrix) # inverse transform
-	B = tools.Tools.remount(Aprime3, (h, w)) #+ 128
+	B = Tools.remount(Aprime3, (h, w)) #+ 128
 	return Aprime2.reshape(h,w), B 
 
 def encodeQuantiseNDecodeBrahimi(image:ndarray, transformation_matrix:ndarray, quantization_matrix:ndarray, diagonal_matrix:ndarray, apply_np2:bool, np2:str='O', N = 8):
@@ -277,11 +141,11 @@ def encodeQuantiseNDecodeBrahimi(image:ndarray, transformation_matrix:ndarray, q
 		else:
 			quantization_matrix_forward = np2_ceil(quantization_matrix_forward)
 			quantization_matrix_backward = np2_ceil(quantization_matrix_backward)
-	A = tools.Tools.umount(image, (N, N))# - 128
+	A = Tools.umount(image, (N, N))# - 128
 	Aprime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', transformation_matrix, A), transformation_matrix.T) # forward transform
 	Aprime2 = multiply(divide(Aprime1, quantization_matrix_forward).round(), quantization_matrix_backward) # quantization
 	Aprime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', transformation_matrix.T, Aprime2), transformation_matrix) # inverse transform
-	B = tools.Tools.remount(Aprime3, (h, w)) #+ 128
+	B = Tools.remount(Aprime3, (h, w)) #+ 128
 	return Aprime2.reshape(h,w), B 
 
 def encodeQuantiseNDecodeBrahimiB(quantization_matrix:ndarray, diagonal_matrix:ndarray):
@@ -302,13 +166,68 @@ def prepareQPhi(image:ndarray, quantization_matrix:ndarray, QF:int=50, N = 8):
 	#plot.imshow(tools.Tools.remount(QPhi, (h, w))); plot.show() # plot the quantization matrices map
 	return QPhi
 
+def WSSSIM(img1, img2, K1 = .01, K2 = .03, L = 255):
+
+    def __fspecial_gauss(size, sigma):
+        x, y = mgrid[-size//2 + 1:size//2 + 1, -size//2 + 1:size//2 + 1]
+        g = exp(-((x**2 + y**2)/(2.0*sigma**2)))
+        return g/g.sum()
+
+    def __weights(height, width):
+        deltaTheta = 2*pi/width 
+        column = asarray([cos( deltaTheta * (j - height/2.+0.5)) for j in range(height)])
+        return repeat(column[:, newaxis], width, 1)
+
+    img1 = float64(img1)
+    img2 = float64(img2)
+
+    k = 11
+    sigma = 1.5
+    window = __fspecial_gauss(k, sigma)
+    window2 = zeros_like(window); window2[k//2,k//2] = 1 
+ 
+    C1 = (K1*L)**2
+    C2 = (K2*L)**2
+
+    mu1 = signal.convolve2d(img1, window, 'valid')
+    mu2 = signal.convolve2d(img2, window, 'valid')
+    
+    mu1_sq = mu1*mu1
+    mu2_sq = mu2*mu2
+    mu1_mu2 = mu1*mu2
+    
+    sigma1_sq = signal.convolve2d(img1*img1, window, 'valid') - mu1_sq
+    sigma2_sq = signal.convolve2d(img2*img2, window, 'valid') - mu2_sq
+    sigma12 = signal.convolve2d(img1*img2, window, 'valid') - mu1_mu2
+   
+    W = __weights(*img1.shape)
+    Wi = signal.convolve2d(W, window2, 'valid')
+
+    ssim_map = ((2*mu1_mu2 + C1)*(2*sigma12 + C2))/((mu1_sq + mu2_sq + C1)*(sigma1_sq + sigma2_sq + C2)) * Wi
+    mssim = sum(ssim_map)/sum(Wi)
+
+    return mssim
+
+def WSPSNR(img1, img2, max = 255.): # img1 e img2 devem ter shape hx2h e ser em grayscale; max eh o maximo valor possivel em img1 e img2 (verificar se deve ser 1 ou 255)
+
+   def __weights(height, width):
+      phis = arange(height+1)*pi/height
+      deltaTheta = 2*pi/width 
+      column = asarray([deltaTheta * (-cos(phis[j+1])+cos(phis[j])) for j in range(height)])
+      return repeat(column[:, newaxis], width, 1)
+
+   w = __weights(*img1.shape)
+   # from matplotlib import pyplot as plt; plt.imshow(w); plt.show()
+   wmse = sum((img1-img2)**2*w)/(4*pi) # É ASSIM MESMO
+   return 10*log10(max**2/wmse)
+
 def use_q_phi(image:ndarray, q_matrix: ndarray, qf:int, block_len:int, response:bool) -> ndarray:
 	if response == True:
 		return prepareQPhi(image, q_matrix, qf, block_len)
 	else:
 		q = []
 		for _ in range(round(image.shape[0] * image.shape[1] / 8 / 8)):
-			q.append(quantization(qf, q_matrix))
+			q.append(quantize(qf, q_matrix))
 		q = asarray(q)
 		return q
 
@@ -349,11 +268,11 @@ def deSimone_compression_low_complexity(image, t_matrix, q_matrix, qf, use_qphi,
 			np2_q_backward = np2_ceil(q_backward)
 	QPhi_forward = use_q_phi(image, np2_q_forward, qf, N, use_qphi)
 	QPhi_backward = use_q_phi(image, np2_q_backward, qf, N, use_qphi)
-	A = tools.Tools.umount(image, (N, N))# - 128
+	A = Tools.umount(image, (N, N))# - 128
 	Aprime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', t_matrix, A), t_matrix.T) # forward transform
 	Aprime2 = multiply(divide(Aprime1, QPhi_forward).round(), QPhi_backward) # quantization
 	Aprime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', t_matrix.T, Aprime2), t_matrix) # inverse transform
-	B = tools.Tools.remount(Aprime3, (h, w)) #+ 128
+	B = Tools.remount(Aprime3, (h, w)) #+ 128
 	B = clip(B, 0, 255)
 	if flag:
 		print(f"\n\nValue of QF: {qf}")
@@ -387,10 +306,15 @@ def deSimone_compression(image:ndarray, q_phi:bool=False, aproximation:bool=Fals
 		return bpp_aux, image_r
 
 '''main'''
-path_images = "test_images/"
+path_images = "../Images_for_tests/Spherical/"
 file = "sample-ERP.jpg"
 full_path = os.path.join(path_images, file)
-image = around(255*imread(full_path, as_gray=True))
+image = imread(full_path, as_gray=True).astype(float)
+if image.max() <= 1:
+	image = around(255*image)
+h, w = image.shape
+A = Tools.umount(image, (8, 8))# - 128
+pause()
 
 datas = {}
 datas.update({'option1':{'Title': '[Ĉ, Q]', 'QPhi': False, 'AproximateTransformation': True, 'BrahimeQuantization': False , 'NP2': False, 'PSNR': [], 'SSIM': [], 'BPP': [], 'color': 'r', 'lineStyle': 'solid'}})

@@ -89,7 +89,7 @@ for file in tqdm(files):
 		Aprime1Oliveira = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO, A), TO.T)
 		Aprime1Brahimi = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB, A), TB.T)
 		
-		BUFFER = {'DCT': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+		BUFFER = {'JPEG': {'PSNR':[], 'SSIM':[], 'BPP':[]},
 			'PO1': {'PSNR':[], 'SSIM':[], 'BPP':[]}, 
 			'PO2': {'PSNR':[], 'SSIM':[], 'BPP':[]},
 			'PB1': {'PSNR':[], 'SSIM':[], 'BPP':[]}, 
@@ -100,13 +100,10 @@ for file in tqdm(files):
 			QOliveira = quantize(QF, Q0)
 			QBrahimi = quantize(QF, QB)
 			
-			QOliveiraRounded = np2_round(QOliveira)
-			QBrahimiCeiled = np2_ceil(QBrahimi)
-
-			# Permutações estranhas
-			QOliveiraCeiled = np2_ceil(QOliveira)
-			QBrahimiRounded = np2_round(QBrahimi)
-
+			Qf_Oliveira = divide(QOliveira, ZOliveira)
+			Qb_Oliveira = multiply(QOliveira, ZOliveira)
+			Qf_Brahimi = divide(QBrahimi, ZBrahimi)
+			Qb_Brahimi = multiply(QBrahimi, ZBrahimi)
 
 			## DCT
 			DctPrime2 = multiply(around(divide(DctPrime1, QOliveira)), QOliveira)
@@ -116,13 +113,13 @@ for file in tqdm(files):
 			#DATAS['DCT']['PSNR'][index] += peak_signal_noise_ratio(image, B, data_range=255)
 			#DATAS['DCT']['SSIM'][index] += structural_similarity(image, B, data_range=255)
 			#DATAS['DCT']['BPP'][index] += bpp(DctPrime2)
-			BUFFER['DCT']['PSNR'].append(peak_signal_noise_ratio(image, B, data_range=255))
-			BUFFER['DCT']['SSIM'].append(structural_similarity(image, B, data_range=255))
-			BUFFER['DCT']['BPP'].append(bpp(DctPrime2))
+			BUFFER['JPEG']['PSNR'].append(peak_signal_noise_ratio(image, B, data_range=255))
+			BUFFER['JPEG']['SSIM'].append(structural_similarity(image, B, data_range=255))
+			BUFFER['JPEG']['BPP'].append(bpp(DctPrime2))
 
 			# Proposta do Oliveira (TO|QO|NP2ROUND)
-			PO1_Q_forward = tile(asarray([divide(QOliveiraRounded, ZOliveira)]), (Aprime1Oliveira.shape[0], 1, 1))
-			PO1_Q_backward = tile(asarray([multiply(QOliveiraRounded, ZOliveira)]), (Aprime1Oliveira.shape[0], 1, 1))
+			PO1_Q_forward = tile(asarray([np2_round(Qf_Oliveira)]), (Aprime1Oliveira.shape[0], 1, 1))
+			PO1_Q_backward = tile(asarray([np2_round(Qb_Oliveira)]), (Aprime1Oliveira.shape[0], 1, 1))
 			PO1Prime2 = multiply(around(divide(Aprime1Oliveira, PO1_Q_forward)), PO1_Q_backward)
 			PO1Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, PO1Prime2), TO)
 			B = clip(Tools.remount(PO1Prime3, (h, w)), 0, 255) #+ 128
@@ -134,9 +131,9 @@ for file in tqdm(files):
 			BUFFER['PO1']['SSIM'].append(structural_similarity(image, B, data_range=255))
 			BUFFER['PO1']['BPP'].append(bpp(PO1Prime2))
 			
-			# Oliveira (TO|QO|NP2CEIL)
-			PO2_Q_forward = tile(asarray([divide(QOliveiraCeiled, ZOliveira)]), (Aprime1Oliveira.shape[0], 1, 1))
-			PO2_Q_backward = tile(asarray([multiply(QOliveiraCeiled, ZOliveira)]), (Aprime1Oliveira.shape[0], 1, 1))
+			# Proposta do Oliveira (TO|QO|NP2CEIL) permutada
+			PO2_Q_forward = tile(asarray([np2_ceil(Qf_Oliveira)]), (Aprime1Oliveira.shape[0], 1, 1))
+			PO2_Q_backward = tile(asarray([np2_ceil(Qb_Oliveira)]), (Aprime1Oliveira.shape[0], 1, 1))
 			PO2Prime2 = multiply(around(divide(Aprime1Oliveira, PO2_Q_forward)), PO2_Q_backward)
 			PO2Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, PO2Prime2), TO)
 			B = clip(Tools.remount(PO2Prime3, (h, w)), 0, 255) #+ 128
@@ -150,8 +147,8 @@ for file in tqdm(files):
 			
 
 			# Proposta da Brahimi (TB|QB|NP2CEIL)
-			PB1_Q_forward = tile(asarray([divide(QBrahimiCeiled, ZBrahimi)]), (Aprime1Brahimi.shape[0], 1, 1))
-			PB1_Q_backward = tile(asarray([multiply(QBrahimiCeiled, ZBrahimi)]), (Aprime1Brahimi.shape[0], 1, 1))
+			PB1_Q_forward = tile(asarray([np2_ceil(Qf_Brahimi)]), (Aprime1Brahimi.shape[0], 1, 1))
+			PB1_Q_backward = tile(asarray([np2_ceil(Qb_Brahimi)]), (Aprime1Brahimi.shape[0], 1, 1))
 			PB1Prime2 = multiply(around(divide(Aprime1Brahimi, PB1_Q_forward)), PB1_Q_backward)
 			PB1Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, PB1Prime2), TB)
 			B = clip(Tools.remount(PB1Prime3, (h, w)), 0, 255) #+ 128
@@ -163,10 +160,10 @@ for file in tqdm(files):
 			BUFFER['PB1']['SSIM'].append(structural_similarity(image, B, data_range=255))
 			BUFFER['PB1']['BPP'].append(bpp(PB1Prime2))
 			
-			# Brahimi (TB|QB|NP2ROUND)
-			PB2_Q_forward = tile(asarray([divide(QBrahimiRounded, ZBrahimi)]), (Aprime1Brahimi.shape[0], 1, 1))
-			PB2_Q_backward = tile(asarray([multiply(QBrahimiRounded, ZBrahimi)]), (Aprime1Brahimi.shape[0], 1, 1))
-			PB2Prime2 = multiply(around(divide(Aprime1Brahimi, PB1_Q_forward)), PB2_Q_backward)
+			# Proposta da Brahimi (TB|QB|NP2ROUND) permutada
+			PB2_Q_forward = tile(asarray([np2_round(Qf_Brahimi)]), (Aprime1Brahimi.shape[0], 1, 1))
+			PB2_Q_backward = tile(asarray([np2_round(Qb_Brahimi)]), (Aprime1Brahimi.shape[0], 1, 1))
+			PB2Prime2 = multiply(around(divide(Aprime1Brahimi, PB2_Q_forward)), PB2_Q_backward)
 			PB2Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, PB2Prime2), TB)
 			B = clip(Tools.remount(PB2Prime3, (h, w)), 0, 255) #+ 128
 			PB2Prime2 = PB2Prime2.reshape(h, w)
@@ -177,7 +174,7 @@ for file in tqdm(files):
 			BUFFER['PB2']['SSIM'].append(structural_similarity(image, B, data_range=255))
 			BUFFER['PB2']['BPP'].append(bpp(PB2Prime2))
 
-		results.append({'File name':file, 'Method':'DCT', 'PSNR':BUFFER['DCT']['PSNR'], 'SSIM':BUFFER['DCT']['SSIM'], 'BPP':BUFFER['DCT']['BPP']})
+		results.append({'File name':file, 'Method':'JPEG', 'PSNR':BUFFER['JPEG']['PSNR'], 'SSIM':BUFFER['JPEG']['SSIM'], 'BPP':BUFFER['JPEG']['BPP']})
 		results.append({'File name':file, 'Method':'Oliveira propose', 'PSNR':BUFFER['PO1']['PSNR'], 'SSIM':BUFFER['PO1']['SSIM'], 'BPP':BUFFER['PO1']['BPP']})
 		results.append({'File name':file, 'Method':'Oliveira with NP2Ceiled', 'PSNR':BUFFER['PO2']['PSNR'], 'SSIM':BUFFER['PO2']['SSIM'], 'BPP':BUFFER['PO2']['BPP']})
 		results.append({'File name':file, 'Method':'Brahimi propose', 'PSNR':BUFFER['PB1']['PSNR'], 'SSIM':BUFFER['PB1']['SSIM'], 'BPP':BUFFER['PB1']['BPP']})

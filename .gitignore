@@ -1,4 +1,5 @@
-Images_for_tests/*
-__pycache__/
+Images_for_tests/
+*HelpingCodes/
+*__pycache__/
 *.md
 *.csv
