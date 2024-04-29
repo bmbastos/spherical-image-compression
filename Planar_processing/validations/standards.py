@@ -57,6 +57,10 @@ def np2_ceil(quantization_matrix:matrix) -> matrix:
 	return power(2, ceil(log2(quantization_matrix)))
 """Função de transformação de uma matriz em uma matriz de potências de dois - Brahimi """
 
+def np2_floor(quantization_matrix:matrix) -> matrix:
+	return power(2, floor(log2(quantization_matrix)))
+"""Função de transformação de uma matriz em uma matriz de potências de dois - Bastos """
+
 
 # Estrturas de armazenamento e constantes de pré-processamento
 quality_factors = range(5, 100, 5)
@@ -140,8 +144,12 @@ for file in tqdm(files):
 			
 			# Proposta da Brahimi (TB|QB|NP2CEIL)
 			# AQUI Concluimos que a proposta da Brahimi não funciona para qualquer QF
-			QB_forward = tile(asarray([np2_ceil(Qf_Brahimi)]), (Aprime1Brahimi.shape[0], 1, 1))
-			QB_backward = tile(asarray([np2_ceil(Qb_Brahimi)]), (Aprime1Brahimi.shape[0], 1, 1))
+			# ANOTAÇÔES
+			# - floor em forward não funciona bem (curvas muito abaixo)
+			# - floor em backward não funciona bem (comportamento inverso da brahimi)
+			# - floor em forward e backward: comportamento bom (parecido com JPEG) até QF85
+			QB_forward = tile(asarray([np2_floor(Qf_Brahimi)]), (Aprime1Brahimi.shape[0], 1, 1))
+			QB_backward = tile(asarray([np2_floor(Qb_Brahimi)]), (Aprime1Brahimi.shape[0], 1, 1))
 			BrahimiPrime2 = multiply(around(divide(Aprime1Brahimi, QB_forward)), QB_backward)
 			BrahimiPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, BrahimiPrime2), TB)
 			D = clip(Tools.remount(BrahimiPrime3, (h, w)), 0, 255) #+ 128
@@ -152,6 +160,7 @@ for file in tqdm(files):
 			BUFFER['BRAHIMI']['PSNR'].append(peak_signal_noise_ratio(image, D, data_range=255))
 			BUFFER['BRAHIMI']['SSIM'].append(structural_similarity(image, D, data_range=255))
 			BUFFER['BRAHIMI']['BPP'].append(bpp(BrahimiPrime2))
+			#print(D)
 			#plot.imshow(D, cmap='gray')
 			#plot.title(f'Brahimi ({QF})')
 			#plot.show()

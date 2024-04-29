@@ -31,6 +31,18 @@ TB = array([[1, 1, 1, 1, 1, 1, 1, 1],
             [0, 0, 0, -1, 1, 0, 0, 0]], dtype=float)
 """ Matriz ternária proposta pela Brahimi para aproximação da DCT """
 
+TR = array([[1, 1, 1, 1, 1, 1, 1, 1],
+            [2, 2, 1, 0, 0, -1, -2, -2],
+            [2, 1, -1, -2, -2, -1, 1, 2],
+            [1, 0, -2, -2, 0, 1, 0, 0],
+            [1, -1, -1, 1, 1, -1, -1, 1],
+            [2, -2, 0, 1, -1, 0, 2, -2],
+            [1, -2, 2, -1, -1, 2, -2, 1],
+            [0, -1, 2, -2, 2, -2, 1, 0]], dtype=float)
+""" Matriz ternária de baixa complexidade proposta pela Raiza """
+
+
+
 
 # Matrizes de quantização 
 Q0 = array([[16, 11, 10, 16, 24, 40, 51, 61], 

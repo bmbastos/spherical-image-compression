@@ -2,6 +2,7 @@ import os
 from scipy import signal
 from pdb import set_trace as pause
 from matplotlib import pyplot as plot
+from matplotlib import colors
 from operator import itemgetter
 import csv
 from numpy import *
@@ -12,13 +13,21 @@ def pre_prossesing(csv_file_name:str) -> tuple:
 	methods = []
 	with open(csv_file_name, 'r') as file:
 		reader = csv.DictReader(file)
-		methods_set = []
 		for row in reader:
 			file_name, method, psnr, ssim, bpp = row.values()
 			methods.append(method)
 			data_set.append({'Filename': file_name, 'Method': method, 'PSNR': eval(psnr), 'SSIM': eval(ssim), 'BPP':eval(bpp)})
 	methods = list(set(methods))
 	return data_set, methods
+
+def random_unique_colors(num_cores):
+	colors_css4 = list(colors.CSS4_COLORS.values())
+	dark_colors = [color for color in colors_css4 if colors.to_rgb(color)[2] < 0.5] # Seleciona apenas cores com valor de intensidade menor que 0.5
+	unique_colors = set()
+	while len(unique_colors) < num_cores:
+		random_color = random.choice(dark_colors)
+		unique_colors.add(random_color)
+	return list(unique_colors)
 			
 
 def averages(data_set: list, methods: list) -> dict:
@@ -38,14 +47,20 @@ def averages(data_set: list, methods: list) -> dict:
 		if method == "JPEG":
 			color = 'black'
 		else:
-			if "Oliveira's" in method:
+			color = 'purple'
+			style = 'dotted'
+			if method == r"$\operatorname{np2}((\mathbf{Q})_\phi\blacksquare\mathbf{Z})$":
+				color = 'red'
+				style = 'dashed'
+			if method == r"$\operatorname{np2}((\mathbf{Q}\blacksquare\mathbf{Z})_\phi)$":
+				color = 'green'
+				style = 'solid'
+			if method == r"$(\operatorname{np2}(\mathbf{Q})\blacksquare\mathbf{Z})_\phi$":
+				color = 'blue'
+				style = 'dashed'
+			if method == "Oliveira planar":
 				color = 'orange'
-				if 'proposal' in method:
-					color = 'red'
-			else:
-				color = 'blueviolet'
-				if 'proposal' in method:
-					color = 'blue'
+				style = 'solid'
 		avgs[f'{method}']= {
 			'PSNR': array(avg_psnr) / n_images,
 			'SSIM': array(avg_ssim) / n_images,
@@ -57,7 +72,7 @@ def averages(data_set: list, methods: list) -> dict:
 	
 
 # __MAIN__#
-target_file = 'standards.csv'
+target_file = 'permutations.csv'
 dataset, methods = pre_prossesing(target_file)
 methods = list(sort(methods))
 index_of_dct = methods.index("JPEG")
@@ -67,19 +82,17 @@ fig = plot.figure(label=target_file)
 ax1 = fig.add_axes([0.1, 0.1 , 0.4, 0.8])
 ax2 = fig.add_axes([0.55, 0.1 , 0.4, 0.8])
 for avg in avgs:
-	ax1.plot(avgs[avg]['BPP'], avgs[avg]['PSNR'], marker='.', color = avgs[avg]['Color'], ls=avgs[avg]['Style'], label=avg)
-	ax1.grid(True)
-	ax1.set_xlabel('BPP'); ax1.set_ylabel('PSNR')
-	ax1.set_xlim(0, 2.3)
-	ax1.set_ylim(7, 50)
-	ax1.legend(methods)
+    ax1.plot(avgs[avg]['BPP'], avgs[avg]['PSNR'], marker='.', color = avgs[avg]['Color'], ls=avgs[avg]['Style'], label=avg)
+    ax1.grid(True)
+    ax1.set_xlabel('BPP'); ax1.set_ylabel('PSNR')
+    ax1.set_xlim(0, 2.6)
+    ax1.set_ylim(25, 50)
+    ax1.legend(methods)  # Não é necessário usar r"{}".format()
 
-	ax2.plot(avgs[avg]['BPP'], avgs[avg]['SSIM'], marker='.', color = avgs[avg]['Color'], ls=avgs[avg]['Style'], label=avg)
-	ax2.grid(True)
-	ax2.set_xlabel('BPP'); ax2.set_ylabel('SSIM')
-	ax2.set_xlim(0, 2.3)
-	ax2.set_ylim(0.7, 1)
-	ax2.legend(methods)
+    ax2.plot(avgs[avg]['BPP'], avgs[avg]['SSIM'], marker='.', color = avgs[avg]['Color'], ls=avgs[avg]['Style'], label=avg)
+    ax2.grid(True)
+    ax2.set_xlabel('BPP'); ax2.set_ylabel('SSIM')
+    ax2.set_xlim(0, 2.6)
+    ax2.set_ylim(0.74, 1)
+    ax2.legend(methods)  # Não é necessário usar r"{}".format()
 plot.show()
-	
-
