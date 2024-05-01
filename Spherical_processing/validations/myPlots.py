@@ -48,16 +48,16 @@ def averages(data_set: list, methods: list) -> dict:
 			color = 'black'
 		else:
 			color = 'purple'
-			style = 'dotted'
-			if method == r"$\operatorname{np2}((\mathbf{Q})_\phi\blacksquare\mathbf{Z})$":
+			style = 'solid'
+			if method == r"$\operatorname{np2}((\mathbf{Q})_\phi\bigstar\mathbf{Z})$":
 				color = 'red'
 				style = 'dashed'
-			if method == r"$\operatorname{np2}((\mathbf{Q}\blacksquare\mathbf{Z})_\phi)$":
+			if method == r"$\operatorname{np2}((\mathbf{Q}\bigstar\mathbf{Z})_\phi)$":
 				color = 'green'
-				style = 'solid'
-			if method == r"$(\operatorname{np2}(\mathbf{Q})\blacksquare\mathbf{Z})_\phi$":
-				color = 'blue'
 				style = 'dashed'
+			if method == r"$(\operatorname{np2}(\mathbf{Q})\bigstar\mathbf{Z})_\phi$":
+				color = 'blue'
+				style = 'solid'
 			if method == "Oliveira planar":
 				color = 'orange'
 				style = 'solid'
@@ -85,14 +85,14 @@ for avg in avgs:
     ax1.plot(avgs[avg]['BPP'], avgs[avg]['PSNR'], marker='.', color = avgs[avg]['Color'], ls=avgs[avg]['Style'], label=avg)
     ax1.grid(True)
     ax1.set_xlabel('BPP'); ax1.set_ylabel('PSNR')
-    ax1.set_xlim(0, 2.6)
+    ax1.set_xlim(0, 3.5)
     ax1.set_ylim(25, 50)
     ax1.legend(methods)  # Não é necessário usar r"{}".format()
 
     ax2.plot(avgs[avg]['BPP'], avgs[avg]['SSIM'], marker='.', color = avgs[avg]['Color'], ls=avgs[avg]['Style'], label=avg)
     ax2.grid(True)
     ax2.set_xlabel('BPP'); ax2.set_ylabel('SSIM')
-    ax2.set_xlim(0, 2.6)
-    ax2.set_ylim(0.74, 1)
+    ax2.set_xlim(0, 3.5)
+    ax2.set_ylim(0.7, 1)
     ax2.legend(methods)  # Não é necessário usar r"{}".format()
 plot.show()

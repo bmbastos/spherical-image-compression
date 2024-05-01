@@ -200,105 +200,110 @@ sr = matrix([1/8**(1/2), 1/18**(1/2), 1/20**(1/2), 1/18**(1/2), 1/8**(1/2), 1/18
 ZR = dot(sr.T, sr)
 quantization_factor = range(5, 100, 5)
 results = []
-
+target = 1
+processed_images = 0
+pause()
 files = os.listdir(path_images)
 for file in tqdm(files):
 	full_path = os.path.join(path_images, file)
 	if os.path.isfile(full_path):
 
-		image = imread(full_path, as_gray=True).astype(float)
-		if image.max() <= 1:
-			image = around(255*image)
-		h, w = image.shape
-		A = Tools.umount(image, (8, 8))# - 128
-		JpegPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T)
-		OliveiraPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO, A), TO.T)
-		BrahimiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB, A), TB.T)
-		RaizaPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
-		ZO_tiled = tile(asarray([ZO]), (A.shape[0], 1, 1))
-
-		BUFFER = {'JPEG': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-					'OLIVEIRA': {'PSNR':[], 'SSIM':[], 'BPP':[]}, 
-					'OLIVEIRA_P1': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-					'OLIVEIRA_P2': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-					'OLIVEIRA_Planar': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-					'OLIVEIRA_TR': {'PSNR':[], 'SSIM':[], 'BPP':[]}}
-
-
-		for QF in tqdm(quantization_factor):
-			QOliveira = adjust_quantization(QF, Q0)
-			QPhiOliveira = prepareQPhi(image, QOliveira)
-
-			# Jpeg with QPhi
-			JpegPrime2 = multiply(around(divide(JpegPrime1, QPhiOliveira)), QPhiOliveira)
-			JpegPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, JpegPrime2), T)
-			B = clip(Tools.remount(JpegPrime3, (h, w)), 0, 255)
-			JpegPrime2 = JpegPrime2.reshape(h, w)
-			BUFFER['JPEG']['PSNR'].append(WSPSNR(image, B))
-			BUFFER['JPEG']['SSIM'].append(WSSSIM(image, B))
-			BUFFER['JPEG']['BPP'].append(bpp(JpegPrime2))
-
-			# Oliveira with QPhi (Matematicamente correta)
-			QPhiOliveiraForward = np2_round(divide(QPhiOliveira, ZO_tiled))
-			QPhiOliveiraBackward = np2_round(multiply(QPhiOliveira, ZO_tiled))
-			OliveiraPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraForward)), QPhiOliveiraBackward)
-			OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
-			C = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
-			OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
-			BUFFER['OLIVEIRA']['PSNR'].append(WSPSNR(image, C))
-			BUFFER['OLIVEIRA']['SSIM'].append(WSSSIM(image, C))
-			BUFFER['OLIVEIRA']['BPP'].append(bpp(OliveiraPrime2))
-
-			# Oliveira with QPhi (Aplicação de QPhi em np2 de q_forward)
-			QPhiOliveiraForward = prepareQPhi(image, np2_round(divide(QOliveira, ZO)))
-			QPhiOliveiraBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZO)))
-			OliveiraPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraForward)), QPhiOliveiraBackward)
-			OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
-			D = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
-			OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
-			BUFFER['OLIVEIRA_P1']['PSNR'].append(WSPSNR(image, D))
-			BUFFER['OLIVEIRA_P1']['SSIM'].append(WSSSIM(image, D))
-			BUFFER['OLIVEIRA_P1']['BPP'].append(bpp(OliveiraPrime2))
+		while (processed_images < target):
 			
-			# Oliveira with QPhi (Aplicação de Np2 em QPhi de q_forward)
-			QPhiOliveiraForward = np2_round(prepareQPhi(image, divide(QOliveira, ZO)))
-			QPhiOliveiraBackward = np2_round(prepareQPhi(image, multiply(QOliveira, ZO)))
-			OliveiraPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraForward)), QPhiOliveiraBackward)
-			OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
-			E = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
-			OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
-			BUFFER['OLIVEIRA_P2']['PSNR'].append(WSPSNR(image, E))
-			BUFFER['OLIVEIRA_P2']['SSIM'].append(WSSSIM(image, E))
-			BUFFER['OLIVEIRA_P2']['BPP'].append(bpp(OliveiraPrime2))
+			image = imread(full_path, as_gray=True).astype(float)
+			if image.max() <= 1:
+				image = around(255*image)
+			h, w = image.shape
+			A = Tools.umount(image, (8, 8))# - 128
+			JpegPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T)
+			OliveiraPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO, A), TO.T)
+			BrahimiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB, A), TB.T)
+			RaizaPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
+			ZO_tiled = tile(asarray([ZO]), (A.shape[0], 1, 1))
 
-			# Oliveira with planar method for comparison
-			QPhiOliveiraPlanarForward = np2_round(divide(QOliveira, ZO_tiled))
-			QPhiOliveiraPlanarBackward = np2_round(multiply(QOliveira, ZO_tiled))
-			OliveiraPlanarPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraPlanarForward)), QPhiOliveiraPlanarBackward)
-			OliveiraPlanarPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPlanarPrime2), TO)
-			F = clip(Tools.remount(OliveiraPlanarPrime3, (h, w)), 0, 255)
-			OliveiraPlanarPrime2 = OliveiraPlanarPrime2.reshape(h, w)
-			BUFFER['OLIVEIRA_Planar']['PSNR'].append(WSPSNR(image, F))
-			BUFFER['OLIVEIRA_Planar']['SSIM'].append(WSSSIM(image, F))
-			BUFFER['OLIVEIRA_Planar']['BPP'].append(bpp(OliveiraPlanarPrime2))
+			BUFFER = {'JPEG': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+						'OLIVEIRA': {'PSNR':[], 'SSIM':[], 'BPP':[]}, 
+						'OLIVEIRA_P1': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+						'OLIVEIRA_P2': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+						'OLIVEIRA_Planar': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+						'OLIVEIRA_TR': {'PSNR':[], 'SSIM':[], 'BPP':[]}}
 
-			# Oliveira method with Raiza transformatio
-			QPhiRaizaForward = np2_round(prepareQPhi(image, divide(QOliveira, ZR)))
-			QPhiRaizaBackward = np2_round(prepareQPhi(image, multiply(QOliveira, ZR)))
-			RaizaPrime2 = multiply(around(divide(RaizaPrime1, QPhiRaizaForward)), QPhiRaizaBackward)
-			RaizaPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaPrime2), TR)
-			G = clip(Tools.remount(RaizaPrime3, (h, w)), 0, 255)
-			RaizaPrime2 = RaizaPrime2.reshape(h, w)
-			BUFFER['OLIVEIRA_TR']['PSNR'].append(WSPSNR(image, G))
-			BUFFER['OLIVEIRA_TR']['SSIM'].append(WSSSIM(image, G))
-			BUFFER['OLIVEIRA_TR']['BPP'].append(bpp(RaizaPrime2))
+
+			for QF in tqdm(quantization_factor):
+				QOliveira = adjust_quantization(QF, Q0)
+				QPhiOliveira = prepareQPhi(image, QOliveira)
+
+				# Jpeg with QPhi
+				JpegPrime2 = multiply(around(divide(JpegPrime1, QPhiOliveira)), QPhiOliveira)
+				JpegPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, JpegPrime2), T)
+				B = clip(Tools.remount(JpegPrime3, (h, w)), 0, 255)
+				JpegPrime2 = JpegPrime2.reshape(h, w)
+				BUFFER['JPEG']['PSNR'].append(WSPSNR(image, B))
+				BUFFER['JPEG']['SSIM'].append(WSSSIM(image, B))
+				BUFFER['JPEG']['BPP'].append(bpp(JpegPrime2))
+
+				# Oliveira with QPhi (Matematicamente correta)
+				QPhiOliveiraForward = np2_round(divide(QPhiOliveira, ZO_tiled))
+				QPhiOliveiraBackward = np2_round(multiply(QPhiOliveira, ZO_tiled))
+				OliveiraPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraForward)), QPhiOliveiraBackward)
+				OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
+				C = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
+				OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
+				BUFFER['OLIVEIRA']['PSNR'].append(WSPSNR(image, C))
+				BUFFER['OLIVEIRA']['SSIM'].append(WSSSIM(image, C))
+				BUFFER['OLIVEIRA']['BPP'].append(bpp(OliveiraPrime2))
+
+				# Oliveira with QPhi (Aplicação de QPhi em np2 de q_forward)
+				QPhiOliveiraForward = prepareQPhi(image, np2_round(divide(QOliveira, ZO)))
+				QPhiOliveiraBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZO)))
+				OliveiraPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraForward)), QPhiOliveiraBackward)
+				OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
+				D = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
+				OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
+				BUFFER['OLIVEIRA_P1']['PSNR'].append(WSPSNR(image, D))
+				BUFFER['OLIVEIRA_P1']['SSIM'].append(WSSSIM(image, D))
+				BUFFER['OLIVEIRA_P1']['BPP'].append(bpp(OliveiraPrime2))
+				
+				# Oliveira with QPhi (Aplicação de Np2 em QPhi de q_forward)
+				QPhiOliveiraForward = np2_round(prepareQPhi(image, divide(QOliveira, ZO)))
+				QPhiOliveiraBackward = np2_round(prepareQPhi(image, multiply(QOliveira, ZO)))
+				OliveiraPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraForward)), QPhiOliveiraBackward)
+				OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
+				E = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
+				OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
+				BUFFER['OLIVEIRA_P2']['PSNR'].append(WSPSNR(image, E))
+				BUFFER['OLIVEIRA_P2']['SSIM'].append(WSSSIM(image, E))
+				BUFFER['OLIVEIRA_P2']['BPP'].append(bpp(OliveiraPrime2))
+
+				# Oliveira with planar method for comparison
+				QPhiOliveiraPlanarForward = np2_round(divide(QOliveira, ZO_tiled))
+				QPhiOliveiraPlanarBackward = np2_round(multiply(QOliveira, ZO_tiled))
+				OliveiraPlanarPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraPlanarForward)), QPhiOliveiraPlanarBackward)
+				OliveiraPlanarPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPlanarPrime2), TO)
+				F = clip(Tools.remount(OliveiraPlanarPrime3, (h, w)), 0, 255)
+				OliveiraPlanarPrime2 = OliveiraPlanarPrime2.reshape(h, w)
+				BUFFER['OLIVEIRA_Planar']['PSNR'].append(WSPSNR(image, F))
+				BUFFER['OLIVEIRA_Planar']['SSIM'].append(WSSSIM(image, F))
+				BUFFER['OLIVEIRA_Planar']['BPP'].append(bpp(OliveiraPlanarPrime2))
+
+				# Oliveira method with Raiza transformatio
+				QPhiRaizaForward = np2_round(prepareQPhi(image, divide(QOliveira, ZR)))
+				QPhiRaizaBackward = np2_round(prepareQPhi(image, multiply(QOliveira, ZR)))
+				RaizaPrime2 = multiply(around(divide(RaizaPrime1, QPhiRaizaForward)), QPhiRaizaBackward)
+				RaizaPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaPrime2), TR)
+				G = clip(Tools.remount(RaizaPrime3, (h, w)), 0, 255)
+				RaizaPrime2 = RaizaPrime2.reshape(h, w)
+				BUFFER['OLIVEIRA_TR']['PSNR'].append(WSPSNR(image, G))
+				BUFFER['OLIVEIRA_TR']['SSIM'].append(WSSSIM(image, G))
+				BUFFER['OLIVEIRA_TR']['BPP'].append(bpp(RaizaPrime2))
 			
-		results.append({'File name':file, 'Method':"JPEG", 'PSNR':BUFFER['JPEG']['PSNR'], 'SSIM':BUFFER['JPEG']['SSIM'], 'BPP':BUFFER['JPEG']['BPP']})
-		results.append({'File name':file, 'Method':"$\operatorname{np2}((\mathbf{Q})_\phi\Box\mathbf{Z})$", 'PSNR':BUFFER['OLIVEIRA']['PSNR'], 'SSIM':BUFFER['OLIVEIRA']['SSIM'], 'BPP':BUFFER['OLIVEIRA']['BPP']})
-		results.append({'File name':file, 'Method':"$\operatorname{np2}((\mathbf{Q}\Box\mathbf{Z})_\phi)$", 'PSNR':BUFFER['OLIVEIRA_P1']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_P1']['SSIM'], 'BPP':BUFFER['OLIVEIRA_P1']['BPP']})
-		results.append({'File name':file, 'Method':"$(\operatorname{np2}(\mathbf{Q})\Box\mathbf{Z})_\phi$", 'PSNR':BUFFER['OLIVEIRA_P2']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_P2']['SSIM'], 'BPP':BUFFER['OLIVEIRA_P2']['BPP']})
-		results.append({'File name':file, 'Method':"Oliveira planar", 'PSNR':BUFFER['OLIVEIRA_Planar']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_Planar']['SSIM'], 'BPP':BUFFER['OLIVEIRA_Planar']['BPP']})
-		results.append({'File name':file, 'Method':"Raiza", 'PSNR':BUFFER['OLIVEIRA_TR']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_TR']['SSIM'], 'BPP':BUFFER['OLIVEIRA_TR']['BPP']})
+			processed_images += 1
+			results.append({'File name':file, 'Method':"JPEG", 'PSNR':BUFFER['JPEG']['PSNR'], 'SSIM':BUFFER['JPEG']['SSIM'], 'BPP':BUFFER['JPEG']['BPP']})
+			results.append({'File name':file, 'Method':r"$\operatorname{np2}((\mathbf{Q})_\phi\bigstar\mathbf{Z})$", 'PSNR':BUFFER['OLIVEIRA']['PSNR'], 'SSIM':BUFFER['OLIVEIRA']['SSIM'], 'BPP':BUFFER['OLIVEIRA']['BPP']})
+			results.append({'File name':file, 'Method':r"$\operatorname{np2}((\mathbf{Q}\bigstar\mathbf{Z})_\phi)$", 'PSNR':BUFFER['OLIVEIRA_P1']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_P1']['SSIM'], 'BPP':BUFFER['OLIVEIRA_P1']['BPP']})
+			results.append({'File name':file, 'Method':r"$(\operatorname{np2}(\mathbf{Q})\bigstar\mathbf{Z})_\phi$", 'PSNR':BUFFER['OLIVEIRA_P2']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_P2']['SSIM'], 'BPP':BUFFER['OLIVEIRA_P2']['BPP']})
+			results.append({'File name':file, 'Method':"Oliveira planar", 'PSNR':BUFFER['OLIVEIRA_Planar']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_Planar']['SSIM'], 'BPP':BUFFER['OLIVEIRA_Planar']['BPP']})
+			results.append({'File name':file, 'Method':"Raiza", 'PSNR':BUFFER['OLIVEIRA_TR']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_TR']['SSIM'], 'BPP':BUFFER['OLIVEIRA_TR']['BPP']})
 
 results = sorted(results, key=itemgetter('File name'))
 fieldnames = ['File name', 'Method', 'PSNR', 'SSIM', 'BPP']
