@@ -44,23 +44,48 @@ def averages(data_set: list, methods: list) -> dict:
 				avg_ssim = list(map(sum, zip(avg_ssim, data['SSIM'])))
 				avg_bpp = list(map(sum, zip(avg_bpp, data['BPP'])))
 		style = 'solid'
-		if method == "JPEG Spherical":
+		if str.startswith(method, 'JPEG'):
 			color = 'black'
 		else:
 			color = 'purple'
 			style = 'solid'
-			if method == r"$\operatorname{np2}((\mathbf{Q})_\phi\bigstar\mathbf{Z})$":
-				color = 'red'
-				style = 'dashed'
-			if method == r"$\operatorname{np2}((\mathbf{Q}\bigstar\mathbf{Z})_\phi)$":
-				color = 'green'
-				style = 'dashed'
-			if method == r"$(\operatorname{np2}(\mathbf{Q})\bigstar\mathbf{Z})_\phi$":
-				color = 'blue'
-				style = 'solid'
-			if method == "Oliveira Spherical":
+			if str.startswith(method, 'Oliveira'):
 				color = 'orange'
 				style = 'solid'
+			if str.startswith(method, 'Raiza'):
+				color = 'm'
+				style = 'solid'
+			else:
+				if len(methods) == 3:
+					if 'ZR' in method:
+						color = 'red'
+						style = 'solid'
+					if 'ZO' in method:
+						color = 'blue'
+						style = 'solid'
+				else:
+					if str.endswith(method, "})$"):
+						color = 'red'
+						style = 'solid'
+					if str.endswith(method, "phi)$"):
+						color = 'green'
+						style = 'dashed'
+					if str.endswith(method, "phi$"):
+						color = 'blue'
+						style = 'solid'
+
+			"""
+			if method == r"$\operatorname{np2}((\mathbf{Q})_\phi\bigstar\mathbf{ZR})$" or method == r"$\operatorname{np2}((\mathbf{Q})_\phi\bigstar\mathbf{ZO})$":
+				color = 'red'
+				style = 'solid'
+			if method == r"$\operatorname{np2}((\mathbf{Q}\bigstar\mathbf{ZR})_\phi)$" or method == r"$\operatorname{np2}((\mathbf{Q}\bigstar\mathbf{ZO})_\phi)$":
+				color = 'green'
+				style = 'dashed'
+			if method == r"$(\operatorname{np2}(\mathbf{Q})\bigstar\mathbf{ZR})_\phi$" or method == r"$(\operatorname{np2}(\mathbf{Q})\bigstar\mathbf{ZO})_\phi$":
+				color = 'blue'
+				style = 'solid'
+			"""
+				
 		avgs[f'{method}']= {
 			'PSNR': array(avg_psnr) / n_images,
 			'SSIM': array(avg_ssim) / n_images,
@@ -72,7 +97,7 @@ def averages(data_set: list, methods: list) -> dict:
 	
 
 # __MAIN__#
-target_file = 'JPEG_Raiza_RDCT_SphericalCompressionWhitoutNp2.csv'
+target_file = 'JPEG_RDCTs_SphericalMethods_in_SphericalImages_with_np2.csv'
 dataset, methods = pre_prossesing(target_file)
 methods = list(sort(methods))
 index_of_dct = methods.index("JPEG Spherical")

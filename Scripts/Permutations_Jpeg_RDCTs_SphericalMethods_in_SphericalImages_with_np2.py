@@ -191,7 +191,7 @@ def WSPSNR(img1, img2, max = 255.): # img1 e img2 devem ter shape hx2h e ser em 
 
 # MAIN --------------------------------------------------------------------------------------------------
 # Pré processamento
-path_images = "../../Images_for_tests/Spherical/4K/"
+path_images = "../Images_for_tests/Spherical/4K/"
 T = calculate_matrix_of_transformation(8)
 SO, so = compute_scale_matrix(TO)
 SB, sb = compute_scale_matrix(TB)
@@ -223,18 +223,16 @@ for file in tqdm(files):
 		ZR_tiled = tile(asarray([ZR]), (A.shape[0], 1, 1))
 
 		BUFFER = {'JPEG_Spherical': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-					'OLIVEIRA': {'PSNR':[], 'SSIM':[], 'BPP':[]}, 
-					'OLIVEIRA_P1': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-					'OLIVEIRA_P2': {'PSNR':[], 'SSIM':[], 'BPP':[]},
 					'OLIVEIRA_Spherical': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-					'RAIZA_Spherical': {'PSNR':[], 'SSIM':[], 'BPP':[]}}
+					'Permutacao1': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+					'Permutacao2': {'PSNR':[], 'SSIM':[], 'BPP':[]}}
 
 
 		for QF in quantization_factor:
 			QOliveira = adjust_quantization(QF, Q0)
 			QPhiOliveira = prepareQPhi(image, QOliveira)
 			
-			# Jpeg Spherical
+			# JPEG ESFÉRICO sem np2
 			JSPrime2 = multiply(around(divide(JpegPrime1, QPhiOliveira)), QPhiOliveira)
 			JSPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, JSPrime2), T)
 			B = clip(Tools.remount(JSPrime3, (h, w)), 0, 255)
@@ -242,32 +240,19 @@ for file in tqdm(files):
 			BUFFER['JPEG_Spherical']['PSNR'].append(WSPSNR(image, B))
 			BUFFER['JPEG_Spherical']['SSIM'].append(WSSSIM(image, B))
 			BUFFER['JPEG_Spherical']['BPP'].append(bpp(JSPrime2))
-			"""
-
-			# Jpeg Planar
-			JPPrime2 = multiply(around(divide(JpegPrime1, QOliveira)), QOliveira)
-			JPPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, JPPrime2), T)
-			B = clip(Tools.remount(JPPrime3, (h, w)), 0, 255)
-			JPPrime2 = JPPrime2.reshape(h, w)
-			BUFFER['JPEG']['PSNR'].append(WSPSNR(image, B))
-			BUFFER['JPEG']['SSIM'].append(WSSSIM(image, B))
-			BUFFER['JPEG']['BPP'].append(bpp(JPPrime2))
-			"""
-
-			# -----------------------------------------------------------------------------------------------------------------------
-
-			"""
-			# Oliveira with QPhi (Matematicamente correta)
-			QPhiOliveiraForward = np2_round(divide(QPhiOliveira, ZO_tiled))
-			QPhiOliveiraBackward = np2_round(multiply(QPhiOliveira, ZO_tiled))
-			OliveiraPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraForward)), QPhiOliveiraBackward)
-			OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
-			C = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
-			OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
-			BUFFER['OLIVEIRA']['PSNR'].append(WSPSNR(image, C))
-			BUFFER['OLIVEIRA']['SSIM'].append(WSSSIM(image, C))
-			BUFFER['OLIVEIRA']['BPP'].append(bpp(OliveiraPrime2))
-
+			
+			# RDCTs ESFÉRICOS com np2
+			# Matematicamente correto
+			QPhiOliveiraSphericalForward = np2_round(divide(QPhiOliveira, ZO_tiled))
+			QPhiOliveiraSphericalBackward = np2_round(multiply(QPhiOliveira, ZO_tiled))
+			OliveiraSphericalPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraSphericalForward)), QPhiOliveiraSphericalBackward)
+			OliveiraPlanarPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraSphericalPrime2), TO)
+			C = clip(Tools.remount(OliveiraPlanarPrime3, (h, w)), 0, 255)
+			OliveiraSphericalPrime2 = OliveiraSphericalPrime2.reshape(h, w)
+			BUFFER['OLIVEIRA_Spherical']['PSNR'].append(WSPSNR(image, C))
+			BUFFER['OLIVEIRA_Spherical']['SSIM'].append(WSSSIM(image, C))
+			BUFFER['OLIVEIRA_Spherical']['BPP'].append(bpp(OliveiraSphericalPrime2))
+			
 			# Oliveira with QPhi (Aplicação de QPhi em np2 de q_forward)
 			QPhiOliveiraForward = prepareQPhi(image, np2_round(divide(QOliveira, ZO)))
 			QPhiOliveiraBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZO)))
@@ -275,9 +260,9 @@ for file in tqdm(files):
 			OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
 			D = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
 			OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
-			BUFFER['OLIVEIRA_P1']['PSNR'].append(WSPSNR(image, D))
-			BUFFER['OLIVEIRA_P1']['SSIM'].append(WSSSIM(image, D))
-			BUFFER['OLIVEIRA_P1']['BPP'].append(bpp(OliveiraPrime2))
+			BUFFER['Permutacao1']['PSNR'].append(WSPSNR(image, D))
+			BUFFER['Permutacao1']['SSIM'].append(WSSSIM(image, D))
+			BUFFER['Permutacao1']['BPP'].append(bpp(OliveiraPrime2))
 			
 			# Oliveira with QPhi (Aplicação de Np2 em QPhi de q_forward)
 			QPhiOliveiraForward = np2_round(prepareQPhi(image, divide(QOliveira, ZO)))
@@ -286,73 +271,19 @@ for file in tqdm(files):
 			OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
 			E = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
 			OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
-			BUFFER['OLIVEIRA_P2']['PSNR'].append(WSPSNR(image, E))
-			BUFFER['OLIVEIRA_P2']['SSIM'].append(WSSSIM(image, E))
-			BUFFER['OLIVEIRA_P2']['BPP'].append(bpp(OliveiraPrime2))
-			"""
+			BUFFER['Permutacao2']['PSNR'].append(WSPSNR(image, E))
+			BUFFER['Permutacao2']['SSIM'].append(WSSSIM(image, E))
+			BUFFER['Permutacao2']['BPP'].append(bpp(OliveiraPrime2))
 
-			# -----------------------------------------------------------------------------------------------------------------------
-			
-			# RAIZA E RDCT PLANARES
-			"""
-			# Oliveira with planar method for comparison
-			QPhiOliveiraPlanarForward = divide(QOliveira, ZO_tiled)
-			QPhiOliveiraPlanarBackward = multiply(QOliveira, ZO_tiled)
-			OliveiraPlanarPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraPlanarForward)), QPhiOliveiraPlanarBackward)
-			OliveiraPlanarPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPlanarPrime2), TO)
-			F = clip(Tools.remount(OliveiraPlanarPrime3, (h, w)), 0, 255)
-			OliveiraPlanarPrime2 = OliveiraPlanarPrime2.reshape(h, w)
-			BUFFER['OLIVEIRA_Planar']['PSNR'].append(WSPSNR(image, F))
-			BUFFER['OLIVEIRA_Planar']['SSIM'].append(WSSSIM(image, F))
-			BUFFER['OLIVEIRA_Planar']['BPP'].append(bpp(OliveiraPlanarPrime2))
-
-			# Oliveira method with Raiza transformatio
-			QPhiRaizaForward = divide(QOliveira, ZR_tiled)
-			QPhiRaizaBackward = multiply(QOliveira, ZR_tiled)
-			RaizaPrime2 = multiply(around(divide(RaizaPrime1, QPhiRaizaForward)), QPhiRaizaBackward)
-			RaizaPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaPrime2), TR)
-			G = clip(Tools.remount(RaizaPrime3, (h, w)), 0, 255)
-			RaizaPrime2 = RaizaPrime2.reshape(h, w)
-			BUFFER['OLIVEIRA_TR']['PSNR'].append(WSPSNR(image, G))
-			BUFFER['OLIVEIRA_TR']['SSIM'].append(WSSSIM(image, G))
-			BUFFER['OLIVEIRA_TR']['BPP'].append(bpp(RaizaPrime2))
-
-			"""
-
-			# RAIZA E RDCT ESFÉRICOS
-			# Oliveira with planar method for comparison
-			QPhiOliveiraSphericalForward = divide(QPhiOliveira, ZO_tiled)
-			QPhiOliveiraSphericalBackward = multiply(QPhiOliveira, ZO_tiled)
-			OliveiraSphericalPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraSphericalForward)), QPhiOliveiraSphericalBackward)
-			OliveiraPlanarPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraSphericalPrime2), TO)
-			F = clip(Tools.remount(OliveiraPlanarPrime3, (h, w)), 0, 255)
-			OliveiraSphericalPrime2 = OliveiraSphericalPrime2.reshape(h, w)
-			BUFFER['OLIVEIRA_Spherical']['PSNR'].append(WSPSNR(image, F))
-			BUFFER['OLIVEIRA_Spherical']['SSIM'].append(WSSSIM(image, F))
-			BUFFER['OLIVEIRA_Spherical']['BPP'].append(bpp(OliveiraSphericalPrime2))
-
-			# Oliveira method with Raiza transformatio
-			QPhiRaizaSphericalForward = divide(QPhiOliveira, ZR_tiled)
-			QPhiRaizaSphericalBackward = multiply(QPhiOliveira, ZR_tiled)
-			RaizaSphericalPrime2 = multiply(around(divide(RaizaPrime1, QPhiRaizaSphericalForward)), QPhiRaizaSphericalBackward)
-			RaizaSphericalPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaSphericalPrime2), TR)
-			G = clip(Tools.remount(RaizaSphericalPrime3, (h, w)), 0, 255)
-			RaizaSphericalPrime2 = RaizaSphericalPrime2.reshape(h, w)
-			BUFFER['RAIZA_Spherical']['PSNR'].append(WSPSNR(image, G))
-			BUFFER['RAIZA_Spherical']['SSIM'].append(WSSSIM(image, G))
-			BUFFER['RAIZA_Spherical']['BPP'].append(bpp(RaizaSphericalPrime2))
-		
 		processed_images += 1
 		results.append({'File name':file, 'Method':"JPEG Spherical", 'PSNR':BUFFER['JPEG_Spherical']['PSNR'], 'SSIM':BUFFER['JPEG_Spherical']['SSIM'], 'BPP':BUFFER['JPEG_Spherical']['BPP']})
-		#results.append({'File name':file, 'Method':r"$\operatorname{np2}((\mathbf{Q})_\phi\bigstar\mathbf{Z})$", 'PSNR':BUFFER['OLIVEIRA']['PSNR'], 'SSIM':BUFFER['OLIVEIRA']['SSIM'], 'BPP':BUFFER['OLIVEIRA']['BPP']})
-		#results.append({'File name':file, 'Method':r"$\operatorname{np2}((\mathbf{Q}\bigstar\mathbf{Z})_\phi)$", 'PSNR':BUFFER['OLIVEIRA_P1']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_P1']['SSIM'], 'BPP':BUFFER['OLIVEIRA_P1']['BPP']})
-		#results.append({'File name':file, 'Method':r"$(\operatorname{np2}(\mathbf{Q})\bigstar\mathbf{Z})_\phi$", 'PSNR':BUFFER['OLIVEIRA_P2']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_P2']['SSIM'], 'BPP':BUFFER['OLIVEIRA_P2']['BPP']})
-		results.append({'File name':file, 'Method':"Oliveira Spherical", 'PSNR':BUFFER['OLIVEIRA_Spherical']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_Spherical']['SSIM'], 'BPP':BUFFER['OLIVEIRA_Spherical']['BPP']})
-		results.append({'File name':file, 'Method':"Raiza Spherical", 'PSNR':BUFFER['RAIZA_Spherical']['PSNR'], 'SSIM':BUFFER['RAIZA_Spherical']['SSIM'], 'BPP':BUFFER['RAIZA_Spherical']['BPP']})
-
+		results.append({'File name':file, 'Method':r"$\operatorname{np2}((\mathbf{Q})_\phi\bigstar\mathbf{Z})$", 'PSNR':BUFFER['OLIVEIRA_Spherical']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_Spherical']['SSIM'], 'BPP':BUFFER['OLIVEIRA_Spherical']['BPP']})
+		results.append({'File name':file, 'Method':r"$\operatorname{np2}((\mathbf{Q}\bigstar\mathbf{Z})_\phi)$", 'PSNR':BUFFER['Permutacao1']['PSNR'], 'SSIM':BUFFER['Permutacao1']['SSIM'], 'BPP':BUFFER['Permutacao1']['BPP']})
+		results.append({'File name':file, 'Method':r"$(\operatorname{np2}(\mathbf{Q})\bigstar\mathbf{Z})_\phi$", 'PSNR':BUFFER['Permutacao2']['PSNR'], 'SSIM':BUFFER['Permutacao2']['SSIM'], 'BPP':BUFFER['Permutacao2']['BPP']})
+		
 results = sorted(results, key=itemgetter('File name'))
 fieldnames = ['File name', 'Method', 'PSNR', 'SSIM', 'BPP']
-with open('JPEG_Raiza_RDCT_SphericalCompressionWhitoutNp2.csv', 'w') as csv_file:
+with open('JPEG_RDCTs_SphericalMethods_in_SphericalImages_with_np2.csv', 'w') as csv_file:
 	writer = csv.DictWriter(csv_file, fieldnames)
 	writer.writeheader()
 	for result in results:
