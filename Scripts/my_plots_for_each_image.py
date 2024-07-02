@@ -84,60 +84,42 @@ for filename in filenames:
 					style = 'dashed'
 				else:
 					style = 'solid'
-				axes[0,0].plot(element['BPP'], element['PSNR'], marker='.', color = color, ls=style, label=element['Method'])
-				axes[0,1].plot(element['BPP'], element['SSIM'], marker='.', color = color, ls=style, label=element['Method'])
-				axes[1,0].plot(element['BPP'], element['PSNR'], marker='.', color = color, ls=style, label=element['Method'])
-				axes[1,1].plot(element['BPP'], element['SSIM'], marker='.', color = color, ls=style, label=element['Method'])
 			elif 'Oliveira' in element['Method']:
 				color = 'red'
 				if 'Spherical' in element['Method']:
 					style = 'dashed'
 				else:
 					style = 'solid'
-				axes[0,0].plot(element['BPP'], element['PSNR'], marker='.', color = color, ls=style, label=element['Method'])
-				axes[0,1].plot(element['BPP'], element['SSIM'], marker='.', color = color, ls=style, label=element['Method'])
-				axes[1,0].plot(element['BPP'], element['PSNR'], marker='.', color = color, ls=style, label=element['Method'])
-				axes[1,1].plot(element['BPP'], element['SSIM'], marker='.', color = color, ls=style, label=element['Method'])
 			elif 'Brahimi' in element['Method']:
 				color = 'green'
 				if 'Spherical' in element['Method']:
 					style = 'dashed'
 				else:
 					style = 'solid'
-				axes[0,0].plot(element['BPP'], element['PSNR'], marker='.', color = color, ls=style, label=element['Method'])
-				axes[0,1].plot(element['BPP'], element['SSIM'], marker='.', color = color, ls=style, label=element['Method'])
-				axes[1,0].plot(element['BPP'], element['PSNR'], marker='.', color = color, ls=style, label=element['Method'])
-				axes[1,1].plot(element['BPP'], element['SSIM'], marker='.', color = color, ls=style, label=element['Method'])
 			elif 'Raiza' in element['Method']:
 				color = 'blue'
 				if 'Spherical' in element['Method']:
 					style = 'dashed'
 				else:
 					style = 'solid'
-				axes[0,0].plot(element['BPP'], element['PSNR'], marker='.', color = color, ls=style, label=element['Method'])
-				axes[0,1].plot(element['BPP'], element['SSIM'], marker='.', color = color, ls=style, label=element['Method'])
-				axes[1,0].plot(element['BPP'], element['PSNR'], marker='.', color = color, ls=style, label=element['Method'])
-				axes[1,1].plot(element['BPP'], element['SSIM'], marker='.', color = color, ls=style, label=element['Method'])
-			axes[0,0].grid(True)
-			axes[0,0].set_xlabel('BPP'); axes[0,0].set_ylabel('PSNR')
-			axes[0,0].set_xlim(0, 3)
-			axes[0,0].set_ylim(25, 50)
-			axes[0,0].legend()
-			axes[0,1].grid(True)
-			axes[0,1].set_xlabel('BPP'); axes[0,1].set_ylabel('SSIM')
-			axes[0,1].set_xlim(0, 3)
-			axes[0,1].set_ylim(0.7, 1)
-			axes[0,1].legend()
-			axes[1,0].grid(True)
-			axes[1,0].set_xlabel('BPP'); axes[1,0].set_ylabel('PSNR')
-			axes[1,0].set_xlim(0, 3)
-			axes[1,0].set_ylim(25, 50)
-			axes[1,0].legend()
-			axes[1,1].grid(True)
-			axes[1,1].set_xlabel('BPP'); axes[1,1].set_ylabel('SSIM')
-			axes[1,1].set_xlim(0, 3)
-			axes[1,1].set_ylim(0.7, 1)
-			axes[1,1].legend()
+			axes[0,0].plot(element['BPP'], element['PSNR'], marker='.', color = color, ls=style, label=element['Method'])
+			axes[0,1].plot(element['BPP'], element['SSIM'], marker='.', color = color, ls=style, label=element['Method'])
+			axes[1,0].plot(element['BPP'], element['PSNR'], marker='.', color = color, ls=style, label=element['Method'])
+			axes[1,1].plot(element['BPP'], element['SSIM'], marker='.', color = color, ls=style, label=element['Method'])
+			for i in range(0,2):
+				for j in range(0,2):
+					axes[i,j].grid(True)
+					axes[i,j].set_xlabel('BPP')
+					axes[i,j].legend()
+					if j == 0:
+						axes[i,j].set_ylabel('PSNR')
+						axes[i,j].set_xlim(0, 3)
+						axes[i,j].set_ylim(25, 50)
+					else:
+						axes[i,j].set_ylabel('SSIM')
+						axes[i,j].set_xlim(0, 3)
+						axes[i,j].set_ylim(0.7, 1)
+
 plot.show()
 
 """
