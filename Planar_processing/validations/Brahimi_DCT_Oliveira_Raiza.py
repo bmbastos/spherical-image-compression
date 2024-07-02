@@ -99,8 +99,8 @@ def build_LUT(image_height:int, N:int=8) -> tuple:
 
 
 def printLUT(k_lut:ndarray, min_lut:ndarray, max_lut:ndarray):
-        for idx in range(len(k_lut)):
-            print(k_lut[idx], "%.4f" % min_lut[idx], "%.4f" % max_lut[idx])
+		for idx in range(len(k_lut)):
+			print(k_lut[idx], "%.4f" % min_lut[idx], "%.4f" % max_lut[idx])
 
 
 def QtildeAtEl(k_lut:ndarray, min_lut:ndarray, max_lut:ndarray, el:float32, quantization_matrix:ndarray, QF:int= 50):
@@ -134,64 +134,64 @@ def prepareQPhi(image:ndarray, quantization_matrix:ndarray, N = 8):
 
 def WSSSIM(img1, img2, K1 = .01, K2 = .03, L = 255):
 
-    def __fspecial_gauss(size, sigma):
-        x, y = mgrid[-size//2 + 1:size//2 + 1, -size//2 + 1:size//2 + 1]
-        g = exp(-((x**2 + y**2)/(2.0*sigma**2)))
-        return g/g.sum()
+	def __fspecial_gauss(size, sigma):
+		x, y = mgrid[-size//2 + 1:size//2 + 1, -size//2 + 1:size//2 + 1]
+		g = exp(-((x**2 + y**2)/(2.0*sigma**2)))
+		return g/g.sum()
 
-    def __weights(height, width):
-        deltaTheta = 2*pi/width 
-        column = asarray([cos( deltaTheta * (j - height/2.+0.5)) for j in range(height)])
-        return repeat(column[:, newaxis], width, 1)
+	def __weights(height, width):
+		deltaTheta = 2*pi/width 
+		column = asarray([cos( deltaTheta * (j - height/2.+0.5)) for j in range(height)])
+		return repeat(column[:, newaxis], width, 1)
 
-    img1 = float64(img1)
-    img2 = float64(img2)
+	img1 = float64(img1)
+	img2 = float64(img2)
 
-    k = 11
-    sigma = 1.5
-    window = __fspecial_gauss(k, sigma)
-    window2 = zeros_like(window); window2[k//2,k//2] = 1 
- 
-    C1 = (K1*L)**2
-    C2 = (K2*L)**2
+	k = 11
+	sigma = 1.5
+	window = __fspecial_gauss(k, sigma)
+	window2 = zeros_like(window); window2[k//2,k//2] = 1 
 
-    mu1 = signal.convolve2d(img1, window, 'valid')
-    mu2 = signal.convolve2d(img2, window, 'valid')
-    
-    mu1_sq = mu1*mu1
-    mu2_sq = mu2*mu2
-    mu1_mu2 = mu1*mu2
-    
-    sigma1_sq = signal.convolve2d(img1*img1, window, 'valid') - mu1_sq
-    sigma2_sq = signal.convolve2d(img2*img2, window, 'valid') - mu2_sq
-    sigma12 = signal.convolve2d(img1*img2, window, 'valid') - mu1_mu2
-   
-    W = __weights(*img1.shape)
-    Wi = signal.convolve2d(W, window2, 'valid')
+	C1 = (K1*L)**2
+	C2 = (K2*L)**2
 
-    ssim_map = ((2*mu1_mu2 + C1)*(2*sigma12 + C2))/((mu1_sq + mu2_sq + C1)*(sigma1_sq + sigma2_sq + C2)) * Wi
-    mssim = sum(ssim_map)/sum(Wi)
+	mu1 = signal.convolve2d(img1, window, 'valid')
+	mu2 = signal.convolve2d(img2, window, 'valid')
+	
+	mu1_sq = mu1*mu1
+	mu2_sq = mu2*mu2
+	mu1_mu2 = mu1*mu2
+	
+	sigma1_sq = signal.convolve2d(img1*img1, window, 'valid') - mu1_sq
+	sigma2_sq = signal.convolve2d(img2*img2, window, 'valid') - mu2_sq
+	sigma12 = signal.convolve2d(img1*img2, window, 'valid') - mu1_mu2
 
-    return mssim
+	W = __weights(*img1.shape)
+	Wi = signal.convolve2d(W, window2, 'valid')
+
+	ssim_map = ((2*mu1_mu2 + C1)*(2*sigma12 + C2))/((mu1_sq + mu2_sq + C1)*(sigma1_sq + sigma2_sq + C2)) * Wi
+	mssim = sum(ssim_map)/sum(Wi)
+
+	return mssim
 
 
 def WSPSNR(img1, img2, max = 255.): # img1 e img2 devem ter shape hx2h e ser em grayscale; max eh o maximo valor possivel em img1 e img2 (verificar se deve ser 1 ou 255)
 
-   def __weights(height, width):
-      phis = arange(height+1)*pi/height
-      deltaTheta = 2*pi/width 
-      column = asarray([deltaTheta * (-cos(phis[j+1])+cos(phis[j])) for j in range(height)])
-      return repeat(column[:, newaxis], width, 1)
+	def __weights(height, width):
+		phis = arange(height+1)*pi/height
+		deltaTheta = 2*pi/width 
+		column = asarray([deltaTheta * (-cos(phis[j+1])+cos(phis[j])) for j in range(height)])
+		return repeat(column[:, newaxis], width, 1)
 
-   w = __weights(*img1.shape)
-   # from matplotlib import pyplot as plt; plt.imshow(w); plt.show()
-   wmse = sum((img1-img2)**2*w)/(4*pi) # É ASSIM MESMO
-   return 10*log10(max**2/wmse)
+	w = __weights(*img1.shape)
+	# from matplotlib import pyplot as plt; plt.imshow(w); plt.show()
+	wmse = sum((img1-img2)**2*w)/(4*pi) # É ASSIM MESMO
+	return 10*log10(max**2/wmse)
 
 
 # MAIN --------------------------------------------------------------------------------------------------
 # Pré processamento
-path_images = "../Images_for_tests/Spherical/4K/"
+path_images = "../../Images_for_tests/Planar/"
 T = calculate_matrix_of_transformation(8)
 SO, so = compute_scale_matrix(TO)
 SB, sb = compute_scale_matrix(TB)
@@ -207,7 +207,7 @@ processed_images = 0
 files = os.listdir(path_images)
 for file in tqdm(files):
 	full_path = os.path.join(path_images, file)
-	if os.path.isfile(full_path) or processed_images < target:
+	if os.path.isfile(full_path):
 
 		image = imread(full_path, as_gray=True).astype(float)
 		if image.max() <= 1:
@@ -222,54 +222,68 @@ for file in tqdm(files):
 		ZB_tiled = tile(asarray([ZB]), (A.shape[0], 1, 1))
 		ZR_tiled = tile(asarray([ZR]), (A.shape[0], 1, 1))
 
-		BUFFER = {'JPEG_Spherical': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-					'OLIVEIRA_Spherical': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-					'RAIZA_Spherical': {'PSNR':[], 'SSIM':[], 'BPP':[]}}
+		BUFFER = {'JPEG_Planar': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+					'RAIZA_Planar': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+					'OLIVEIRA_Planar': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+					'BRAHIMI_Planar': {'PSNR':[], 'SSIM':[], 'BPP':[]}}
 
 
 		for QF in quantization_factor:
 			QOliveira = adjust_quantization(QF, Q0)
+			QBrahimi = adjust_quantization(QF, QB)
 			QPhiOliveira = prepareQPhi(image, QOliveira)
 			
-			# JPEG ESFÉRICO
-			JSPrime2 = multiply(around(divide(JpegPrime1, QPhiOliveira)), QPhiOliveira)
-			JSPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, JSPrime2), T)
-			B = clip(Tools.remount(JSPrime3, (h, w)), 0, 255)
-			JSPrime2 = JSPrime2.reshape(h, w)
-			BUFFER['JPEG_Spherical']['PSNR'].append(WSPSNR(image, B))
-			BUFFER['JPEG_Spherical']['SSIM'].append(WSSSIM(image, B))
-			BUFFER['JPEG_Spherical']['BPP'].append(bpp(JSPrime2))
-			
-			# RAIZA E RDCT ESFÉRICOS
-			QPhiRaizaSphericalForward = divide(QPhiOliveira, ZR_tiled)
-			QPhiRaizaSphericalBackward = multiply(QPhiOliveira, ZR_tiled)
-			RaizaSphericalPrime2 = multiply(around(divide(RaizaPrime1, QPhiRaizaSphericalForward)), QPhiRaizaSphericalBackward)
-			RaizaSphericalPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaSphericalPrime2), TR)
-			C = clip(Tools.remount(RaizaSphericalPrime3, (h, w)), 0, 255)
-			RaizaSphericalPrime2 = RaizaSphericalPrime2.reshape(h, w)
-			BUFFER['RAIZA_Spherical']['PSNR'].append(WSPSNR(image, C))
-			BUFFER['RAIZA_Spherical']['SSIM'].append(WSSSIM(image, C))
-			BUFFER['RAIZA_Spherical']['BPP'].append(bpp(RaizaSphericalPrime2))
-			
-			QPhiOliveiraSphericalForward = divide(QPhiOliveira, ZO_tiled)
-			QPhiOliveiraSphericalBackward = multiply(QPhiOliveira, ZO_tiled)
-			OliveiraSphericalPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraSphericalForward)), QPhiOliveiraSphericalBackward)
-			OliveiraPlanarPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraSphericalPrime2), TO)
-			D = clip(Tools.remount(OliveiraPlanarPrime3, (h, w)), 0, 255)
-			OliveiraSphericalPrime2 = OliveiraSphericalPrime2.reshape(h, w)
-			BUFFER['OLIVEIRA_Spherical']['PSNR'].append(WSPSNR(image, D))
-			BUFFER['OLIVEIRA_Spherical']['SSIM'].append(WSSSIM(image, D))
-			BUFFER['OLIVEIRA_Spherical']['BPP'].append(bpp(OliveiraSphericalPrime2))
+			# JPEG Planar
+			JPPrime2 = multiply(around(divide(JpegPrime1, QOliveira)), QOliveira)
+			JPPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, JPPrime2), T)
+			B = clip(Tools.remount(JPPrime3, (h, w)), 0, 255)
+			JPPrime2 = JPPrime2.reshape(h, w)
+			BUFFER['JPEG_Planar']['PSNR'].append(peak_signal_noise_ratio(image, B, data_range=255))
+			BUFFER['JPEG_Planar']['SSIM'].append(structural_similarity(image, B, data_range=255))
+			BUFFER['JPEG_Planar']['BPP'].append(bpp(JPPrime2))
 
-		
+			# RDCT
+			QOliveiraForward = np2_round(divide(QOliveira, ZO_tiled))
+			QOliveiraBackward = np2_round(multiply(QOliveira, ZO_tiled))
+			OliveiraPrime2 = multiply(around(divide(OliveiraPrime1, QOliveiraForward)), QOliveiraBackward)
+			OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
+			C = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
+			OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
+			BUFFER['OLIVEIRA_Planar']['PSNR'].append(peak_signal_noise_ratio(image, C, data_range=255))
+			BUFFER['OLIVEIRA_Planar']['SSIM'].append(structural_similarity(image, C, data_range=255))
+			BUFFER['OLIVEIRA_Planar']['BPP'].append(bpp(OliveiraPrime2))
+
+			# Brahimi
+			QBrahimiForward = np2_round(divide(QBrahimi, ZB_tiled))
+			QBrahimiBackward = np2_round(multiply(QBrahimi, ZB_tiled))
+			BrahimiPrime2 = multiply(around(divide(BrahimiPrime1, QBrahimiForward)), QBrahimiBackward)
+			BrahimiPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, BrahimiPrime2), TB)
+			D = clip(Tools.remount(BrahimiPrime3, (h, w)), 0, 255)
+			BrahimiPrime2 = BrahimiPrime2.reshape(h, w)
+			BUFFER['BRAHIMI_Planar']['PSNR'].append(peak_signal_noise_ratio(image, D, data_range=255))
+			BUFFER['BRAHIMI_Planar']['SSIM'].append(structural_similarity(image, D, data_range=255))
+			BUFFER['BRAHIMI_Planar']['BPP'].append(bpp(BrahimiPrime2))
+			
+			# Raiza
+			QRaizaForward = np2_round(divide(QOliveira, ZR_tiled))
+			QRaizaBackward = np2_round(multiply(QOliveira, ZR_tiled))
+			RaizaPrime2 = multiply(around(divide(RaizaPrime1, QRaizaForward)), QRaizaBackward)
+			RaizaPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaPrime2), TR)
+			E = clip(Tools.remount(RaizaPrime3, (h, w)), 0, 255)
+			RaizaPrime2 = RaizaPrime2.reshape(h, w)
+			BUFFER['RAIZA_Planar']['PSNR'].append(peak_signal_noise_ratio(image, E, data_range=255))
+			BUFFER['RAIZA_Planar']['SSIM'].append(structural_similarity(image, E, data_range=255))
+			BUFFER['RAIZA_Planar']['BPP'].append(bpp(RaizaPrime2))
+
 		processed_images += 1
-		results.append({'File name':file, 'Method':"JPEG Spherical", 'PSNR':BUFFER['JPEG_Spherical']['PSNR'], 'SSIM':BUFFER['JPEG_Spherical']['SSIM'], 'BPP':BUFFER['JPEG_Spherical']['BPP']})
-		results.append({'File name':file, 'Method':"Oliveira Spherical", 'PSNR':BUFFER['OLIVEIRA_Spherical']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_Spherical']['SSIM'], 'BPP':BUFFER['OLIVEIRA_Spherical']['BPP']})
-		results.append({'File name':file, 'Method':"Raiza Spherical", 'PSNR':BUFFER['RAIZA_Spherical']['PSNR'], 'SSIM':BUFFER['RAIZA_Spherical']['SSIM'], 'BPP':BUFFER['RAIZA_Spherical']['BPP']})
-
+		results.append({'File name':file, 'Method':"JPEG Planar", 'PSNR':BUFFER['JPEG_Planar']['PSNR'], 'SSIM':BUFFER['JPEG_Planar']['SSIM'], 'BPP':BUFFER['JPEG_Planar']['BPP']})
+		results.append({'File name':file, 'Method':"Brahimi Planar", 'PSNR':BUFFER['BRAHIMI_Planar']['PSNR'], 'SSIM':BUFFER['BRAHIMI_Planar']['SSIM'], 'BPP':BUFFER['BRAHIMI_Planar']['BPP']})
+		results.append({'File name':file, 'Method':"Raiza Planar", 'PSNR':BUFFER['RAIZA_Planar']['PSNR'], 'SSIM':BUFFER['RAIZA_Planar']['SSIM'], 'BPP':BUFFER['RAIZA_Planar']['BPP']})
+		results.append({'File name':file, 'Method':"Oliveira Planar", 'PSNR':BUFFER['OLIVEIRA_Planar']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_Planar']['SSIM'], 'BPP':BUFFER['OLIVEIRA_Planar']['BPP']})
+		
 results = sorted(results, key=itemgetter('File name'))
 fieldnames = ['File name', 'Method', 'PSNR', 'SSIM', 'BPP']
-with open('JPEG_Raiza_RDCT_Spherical_without_np2.csv', 'w') as csv_file:
+with open('Brahimi_DCT_Oliveira_RDCT.csv', 'w') as csv_file:
 	writer = csv.DictWriter(csv_file, fieldnames)
 	writer.writeheader()
 	for result in results:

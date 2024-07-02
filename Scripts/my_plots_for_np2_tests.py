@@ -53,9 +53,9 @@ def averages(data_set: list, methods: list) -> dict:
 				color = 'red'
 			elif str.startswith(method, 'Raiza'):
 				color = 'blue'
-			if str.endswith(method, 'R'):
+			if str.endswith(method, 'R') or str.endswith(method, 'Spherical'):
 				style = 'dashed'
-			elif str.endswith(method, 'C'):
+			elif str.endswith(method, 'C') or str.endswith(method, 'Planar'):
 				style = 'solid'
 			elif str.endswith(method, 'F'):
 				style = 'dotted'	

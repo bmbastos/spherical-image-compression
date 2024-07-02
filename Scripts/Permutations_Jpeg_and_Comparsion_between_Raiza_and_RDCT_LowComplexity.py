@@ -206,68 +206,69 @@ target = 1
 processed_images = 0
 files = os.listdir(path_images)
 for file in tqdm(files):
-	full_path = os.path.join(path_images, file)
-	if os.path.isfile(full_path) or processed_images < target:
+	while processed_images < target:
+		full_path = os.path.join(path_images, file)
+		if os.path.isfile(full_path):
 
-		image = imread(full_path, as_gray=True).astype(float)
-		if image.max() <= 1:
-			image = around(255*image)
-		h, w = image.shape
-		A = Tools.umount(image, (8, 8))# - 128
-		JpegPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T)
-		OliveiraPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO, A), TO.T)
-		BrahimiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB, A), TB.T)
-		RaizaPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
-		ZO_tiled = tile(asarray([ZO]), (A.shape[0], 1, 1))
-		ZB_tiled = tile(asarray([ZB]), (A.shape[0], 1, 1))
-		ZR_tiled = tile(asarray([ZR]), (A.shape[0], 1, 1))
+			image = imread(full_path, as_gray=True).astype(float)
+			if image.max() <= 1:
+				image = around(255*image)
+			h, w = image.shape
+			A = Tools.umount(image, (8, 8))# - 128
+			JpegPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T)
+			OliveiraPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO, A), TO.T)
+			BrahimiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB, A), TB.T)
+			RaizaPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
+			ZO_tiled = tile(asarray([ZO]), (A.shape[0], 1, 1))
+			ZB_tiled = tile(asarray([ZB]), (A.shape[0], 1, 1))
+			ZR_tiled = tile(asarray([ZR]), (A.shape[0], 1, 1))
 
-		BUFFER = {'JPEG_Spherical': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-					'RAIZA_LowCost': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-					'OLIVEIRA_LowCost': {'PSNR':[], 'SSIM':[], 'BPP':[]}}
+			BUFFER = {'JPEG_Spherical': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+						'RAIZA_LowCost': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+						'OLIVEIRA_LowCost': {'PSNR':[], 'SSIM':[], 'BPP':[]}}
 
 
-		for QF in quantization_factor:
-			QOliveira = adjust_quantization(QF, Q0)
-			QPhiOliveira = prepareQPhi(image, QOliveira)
-			
-			# JPEG ESFÉRICO sem np2
-			JSPrime2 = multiply(around(divide(JpegPrime1, QPhiOliveira)), QPhiOliveira)
-			JSPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, JSPrime2), T)
-			B = clip(Tools.remount(JSPrime3, (h, w)), 0, 255)
-			JSPrime2 = JSPrime2.reshape(h, w)
-			BUFFER['JPEG_Spherical']['PSNR'].append(WSPSNR(image, B))
-			BUFFER['JPEG_Spherical']['SSIM'].append(WSSSIM(image, B))
-			BUFFER['JPEG_Spherical']['BPP'].append(bpp(JSPrime2))
-			
-			# Comparision between Raiza and RDCT with low complexity and sphericals
-			
-			# Raiza
-			QPhiRaizaForward = prepareQPhi(image, np2_round(divide(QOliveira, ZR)))
-			QPhiRaizaBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZR)))
-			RaizaPermutation1Prime2 = multiply(around(divide(RaizaPrime1, QPhiRaizaForward)), QPhiRaizaBackward)
-			RaizaPermutation1Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaPermutation1Prime2), TR)
-			C = clip(Tools.remount(RaizaPermutation1Prime3, (h, w)), 0, 255)
-			RaizaPermutation1Prime2 = RaizaPermutation1Prime2.reshape(h, w)
-			BUFFER['RAIZA_LowCost']['PSNR'].append(WSPSNR(image, C))
-			BUFFER['RAIZA_LowCost']['SSIM'].append(WSSSIM(image, C))
-			BUFFER['RAIZA_LowCost']['BPP'].append(bpp(RaizaPermutation1Prime2))
-			
-			# RDCT
-			QPhiOliveiraForward = prepareQPhi(image, np2_round(divide(QOliveira, ZO)))
-			QPhiOliveiraBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZO)))
-			OliveiraPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraForward)), QPhiOliveiraBackward)
-			OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
-			D = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
-			OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
-			BUFFER['OLIVEIRA_LowCost']['PSNR'].append(WSPSNR(image, D))
-			BUFFER['OLIVEIRA_LowCost']['SSIM'].append(WSSSIM(image, D))
-			BUFFER['OLIVEIRA_LowCost']['BPP'].append(bpp(OliveiraPrime2))
+			for QF in quantization_factor:
+				QOliveira = adjust_quantization(QF, Q0)
+				QPhiOliveira = prepareQPhi(image, QOliveira)
+				
+				# JPEG ESFÉRICO sem np2
+				JSPrime2 = multiply(around(divide(JpegPrime1, QPhiOliveira)), QPhiOliveira)
+				JSPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, JSPrime2), T)
+				B = clip(Tools.remount(JSPrime3, (h, w)), 0, 255)
+				JSPrime2 = JSPrime2.reshape(h, w)
+				BUFFER['JPEG_Spherical']['PSNR'].append(WSPSNR(image, B))
+				BUFFER['JPEG_Spherical']['SSIM'].append(WSSSIM(image, B))
+				BUFFER['JPEG_Spherical']['BPP'].append(bpp(JSPrime2))
+				
+				# Comparision between Raiza and RDCT with low complexity and sphericals
+				
+				# Raiza
+				QPhiRaizaForward = prepareQPhi(image, np2_round(divide(QOliveira, ZR)))
+				QPhiRaizaBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZR)))
+				RaizaPermutation1Prime2 = multiply(around(divide(RaizaPrime1, QPhiRaizaForward)), QPhiRaizaBackward)
+				RaizaPermutation1Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaPermutation1Prime2), TR)
+				C = clip(Tools.remount(RaizaPermutation1Prime3, (h, w)), 0, 255)
+				RaizaPermutation1Prime2 = RaizaPermutation1Prime2.reshape(h, w)
+				BUFFER['RAIZA_LowCost']['PSNR'].append(WSPSNR(image, C))
+				BUFFER['RAIZA_LowCost']['SSIM'].append(WSSSIM(image, C))
+				BUFFER['RAIZA_LowCost']['BPP'].append(bpp(RaizaPermutation1Prime2))
+				
+				# RDCT
+				QPhiOliveiraForward = prepareQPhi(image, np2_round(divide(QOliveira, ZO)))
+				QPhiOliveiraBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZO)))
+				OliveiraPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraForward)), QPhiOliveiraBackward)
+				OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
+				D = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
+				OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
+				BUFFER['OLIVEIRA_LowCost']['PSNR'].append(WSPSNR(image, D))
+				BUFFER['OLIVEIRA_LowCost']['SSIM'].append(WSSSIM(image, D))
+				BUFFER['OLIVEIRA_LowCost']['BPP'].append(bpp(OliveiraPrime2))
 
-		processed_images += 1
-		results.append({'File name':file, 'Method':"JPEG Spherical", 'PSNR':BUFFER['JPEG_Spherical']['PSNR'], 'SSIM':BUFFER['JPEG_Spherical']['SSIM'], 'BPP':BUFFER['JPEG_Spherical']['BPP']})
-		results.append({'File name':file, 'Method':r"$\operatorname{np2}((\mathbf{Q})_\phi\bigstar\mathbf{ZR})$", 'PSNR':BUFFER['RAIZA_LowCost']['PSNR'], 'SSIM':BUFFER['RAIZA_LowCost']['SSIM'], 'BPP':BUFFER['RAIZA_LowCost']['BPP']})
-		results.append({'File name':file, 'Method':r"$\operatorname{np2}((\mathbf{Q})_\phi\bigstar\mathbf{ZO})$", 'PSNR':BUFFER['OLIVEIRA_LowCost']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_LowCost']['SSIM'], 'BPP':BUFFER['OLIVEIRA_LowCost']['BPP']})
+			processed_images += 1
+			results.append({'File name':file, 'Method':"JPEG Spherical", 'PSNR':BUFFER['JPEG_Spherical']['PSNR'], 'SSIM':BUFFER['JPEG_Spherical']['SSIM'], 'BPP':BUFFER['JPEG_Spherical']['BPP']})
+			results.append({'File name':file, 'Method':r"Raiza $\operatorname{np2}((\mathbf{Q})_\phi\bigstar\mathbf{ZR})$", 'PSNR':BUFFER['RAIZA_LowCost']['PSNR'], 'SSIM':BUFFER['RAIZA_LowCost']['SSIM'], 'BPP':BUFFER['RAIZA_LowCost']['BPP']})
+			results.append({'File name':file, 'Method':r"Oliveira $\operatorname{np2}((\mathbf{Q})_\phi\bigstar\mathbf{ZO})$", 'PSNR':BUFFER['OLIVEIRA_LowCost']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_LowCost']['SSIM'], 'BPP':BUFFER['OLIVEIRA_LowCost']['BPP']})
 		
 results = sorted(results, key=itemgetter('File name'))
 fieldnames = ['File name', 'Method', 'PSNR', 'SSIM', 'BPP']

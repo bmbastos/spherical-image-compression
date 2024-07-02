@@ -270,7 +270,7 @@ for file in tqdm(files):
 
 results = sorted(results, key=itemgetter('File name'))
 fieldnames = ['File name', 'Method', 'PSNR', 'SSIM', 'BPP']
-with open('JPEG_Raiza_RDCT_PlanarMethod_in_SphericalImages_without_np2.csv', 'w') as csv_file:
+with open('JPEG_Raiza_RDCT_Planar_without_np2.csv', 'w') as csv_file:
 	writer = csv.DictWriter(csv_file, fieldnames)
 	writer.writeheader()
 	for result in results:

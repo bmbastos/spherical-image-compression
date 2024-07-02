@@ -99,23 +99,23 @@ def build_LUT(image_height:int, N:int=8) -> tuple:
 
 
 def printLUT(k_lut:ndarray, min_lut:ndarray, max_lut:ndarray):
-        for idx in range(len(k_lut)):
-            print(k_lut[idx], "%.4f" % min_lut[idx], "%.4f" % max_lut[idx])
+	for idx in range(len(k_lut)):
+		print(k_lut[idx], "%.4f" % min_lut[idx], "%.4f" % max_lut[idx])
 
 
 def QtildeAtEl(k_lut:ndarray, min_lut:ndarray, max_lut:ndarray, el:float32, quantization_matrix:ndarray, QF:int= 50):
-		ks = None
-		Q = []
-		el = abs(el) # LUT is mirrored
-		for idx in range(len(k_lut)):
-			if el >= min_lut[idx] and el < max_lut[idx]: 
-				ks = k_lut[idx]
-		if ks is None and isclose(el, 0): ks = k_lut[0]
-		for k in ks:
-			Q.append(quantization_matrix.T.tolist()[k])
-		Q = asarray(Q)
-		Q = Q.T
-		return Q
+	ks = None
+	Q = []
+	el = abs(el) # LUT is mirrored
+	for idx in range(len(k_lut)):
+		if el >= min_lut[idx] and el < max_lut[idx]: 
+			ks = k_lut[idx]
+	if ks is None and isclose(el, 0): ks = k_lut[0]
+	for k in ks:
+		Q.append(quantization_matrix.T.tolist()[k])
+	Q = asarray(Q)
+	Q = Q.T
+	return Q
 
 
 def prepareQPhi(image:ndarray, quantization_matrix:ndarray, N = 8):
@@ -194,20 +194,23 @@ def WSPSNR(img1, img2, max = 255.): # img1 e img2 devem ter shape hx2h e ser em 
 path_images = "../Images_for_tests/Spherical/4K/"
 T = calculate_matrix_of_transformation(8)
 SO, so = compute_scale_matrix(TO)
-SB, sb = compute_scale_matrix(TB)
+#SB, sb = compute_scale_matrix(TB)
 SR, sr = compute_scale_matrix(TR)
 ZO = dot(so.T, so)
-ZB = dot(sb.T, sb)
+#ZB = dot(sb.T, sb)
 ZR = dot(sr.T, sr)
 
 quantization_factor = range(5, 100, 5)
 results = []
-target = 1
+target = 100
 processed_images = 0
 files = os.listdir(path_images)
-for file in tqdm(files):
+for file in files:
+	if processed_images >= target:
+		break
 	full_path = os.path.join(path_images, file)
-	if os.path.isfile(full_path) or processed_images < target:
+	print(file)
+	if os.path.isfile(full_path):
 
 		image = imread(full_path, as_gray=True).astype(float)
 		if image.max() <= 1:
@@ -216,18 +219,21 @@ for file in tqdm(files):
 		A = Tools.umount(image, (8, 8))# - 128
 		JpegPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T)
 		OliveiraPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO, A), TO.T)
-		BrahimiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB, A), TB.T)
+		#BrahimiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB, A), TB.T)
 		RaizaPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
 		ZO_tiled = tile(asarray([ZO]), (A.shape[0], 1, 1))
-		ZB_tiled = tile(asarray([ZB]), (A.shape[0], 1, 1))
+		#ZB_tiled = tile(asarray([ZB]), (A.shape[0], 1, 1))
 		ZR_tiled = tile(asarray([ZR]), (A.shape[0], 1, 1))
 
 		BUFFER = {'JPEG_Spherical': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+					'JPEG_Planar': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+					'RAIZA_Spherical': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+					'RAIZA_Planar': {'PSNR':[], 'SSIM':[], 'BPP':[]},
 					'OLIVEIRA_Spherical': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-					'RAIZA_Spherical': {'PSNR':[], 'SSIM':[], 'BPP':[]}}
+					'OLIVEIRA_Planar': {'PSNR':[], 'SSIM':[], 'BPP':[]}}
 
 
-		for QF in quantization_factor:
+		for QF in tqdm(quantization_factor):
 			QOliveira = adjust_quantization(QF, Q0)
 			QPhiOliveira = prepareQPhi(image, QOliveira)
 			
@@ -239,37 +245,113 @@ for file in tqdm(files):
 			BUFFER['JPEG_Spherical']['PSNR'].append(WSPSNR(image, B))
 			BUFFER['JPEG_Spherical']['SSIM'].append(WSSSIM(image, B))
 			BUFFER['JPEG_Spherical']['BPP'].append(bpp(JSPrime2))
-			
-			# RAIZA E RDCT ESFÉRICOS
-			QPhiRaizaSphericalForward = divide(QPhiOliveira, ZR_tiled)
-			QPhiRaizaSphericalBackward = multiply(QPhiOliveira, ZR_tiled)
-			RaizaSphericalPrime2 = multiply(around(divide(RaizaPrime1, QPhiRaizaSphericalForward)), QPhiRaizaSphericalBackward)
-			RaizaSphericalPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaSphericalPrime2), TR)
-			C = clip(Tools.remount(RaizaSphericalPrime3, (h, w)), 0, 255)
-			RaizaSphericalPrime2 = RaizaSphericalPrime2.reshape(h, w)
-			BUFFER['RAIZA_Spherical']['PSNR'].append(WSPSNR(image, C))
-			BUFFER['RAIZA_Spherical']['SSIM'].append(WSSSIM(image, C))
-			BUFFER['RAIZA_Spherical']['BPP'].append(bpp(RaizaSphericalPrime2))
-			
-			QPhiOliveiraSphericalForward = divide(QPhiOliveira, ZO_tiled)
-			QPhiOliveiraSphericalBackward = multiply(QPhiOliveira, ZO_tiled)
-			OliveiraSphericalPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraSphericalForward)), QPhiOliveiraSphericalBackward)
-			OliveiraPlanarPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraSphericalPrime2), TO)
-			D = clip(Tools.remount(OliveiraPlanarPrime3, (h, w)), 0, 255)
-			OliveiraSphericalPrime2 = OliveiraSphericalPrime2.reshape(h, w)
-			BUFFER['OLIVEIRA_Spherical']['PSNR'].append(WSPSNR(image, D))
-			BUFFER['OLIVEIRA_Spherical']['SSIM'].append(WSSSIM(image, D))
-			BUFFER['OLIVEIRA_Spherical']['BPP'].append(bpp(OliveiraSphericalPrime2))
 
-		
+			# JPEG PLANAR
+			JPPrime2 = multiply(around(divide(JpegPrime1, QOliveira)), QOliveira)
+			JPPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, JPPrime2), T)
+			C = clip(Tools.remount(JPPrime3, (h, w)), 0, 255)
+			JPPrime2 = JPPrime2.reshape(h, w)
+			BUFFER['JPEG_Planar']['PSNR'].append(WSPSNR(image, C))
+			BUFFER['JPEG_Planar']['SSIM'].append(WSSSIM(image, C))
+			BUFFER['JPEG_Planar']['BPP'].append(bpp(JPPrime2))
+			
+			# RAIZA ESFÉRICO
+			QPhiRaizaForward = np2_round(divide(QPhiOliveira, ZR_tiled))
+			QPhiRaizaBackward = np2_round(multiply(QPhiOliveira, ZR_tiled))
+			RaizaSPrime2 = multiply(around(divide(RaizaPrime1, QPhiRaizaForward)), QPhiRaizaBackward)
+			RaizaSPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaSPrime2), TR)
+			D = clip(Tools.remount(RaizaSPrime3, (h, w)), 0, 255)
+			RaizaSPrime2 = RaizaSPrime2.reshape(h, w)
+			BUFFER['RAIZA_Spherical']['PSNR'].append(WSPSNR(image, D))
+			BUFFER['RAIZA_Spherical']['SSIM'].append(WSSSIM(image, D))
+			BUFFER['RAIZA_Spherical']['BPP'].append(bpp(RaizaSPrime2))
+
+			# RAIZA PLANAR
+			QRaizaForward = np2_round(divide(QOliveira, ZR_tiled))
+			QRaizaBackward = np2_round(multiply(QOliveira, ZR_tiled))
+			RaizaPPrime2 = multiply(around(divide(RaizaPrime1, QRaizaForward)), QRaizaBackward)
+			RaizaPPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaPPrime2), TR)
+			E = clip(Tools.remount(RaizaPPrime3, (h, w)), 0, 255)
+			RaizaPPrime2 = RaizaPPrime2.reshape(h, w)
+			BUFFER['RAIZA_Planar']['PSNR'].append(WSPSNR(image, E))
+			BUFFER['RAIZA_Planar']['SSIM'].append(WSSSIM(image, E))
+			BUFFER['RAIZA_Planar']['BPP'].append(bpp(RaizaPPrime2))
+			
+			# RDCT ESFÉRICO
+			QPhiOliveiraForward = np2_round(divide(QPhiOliveira, ZO_tiled))
+			QPhiOliveiraBackward = np2_round(multiply(QPhiOliveira, ZO_tiled))
+			OliveiraSPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraForward)), QPhiOliveiraBackward)
+			OliveiraSPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraSPrime2), TO)
+			F = clip(Tools.remount(OliveiraSPrime3, (h, w)), 0, 255)
+			OliveiraSPrime2 = OliveiraSPrime2.reshape(h, w)
+			BUFFER['OLIVEIRA_Spherical']['PSNR'].append(WSPSNR(image, F))
+			BUFFER['OLIVEIRA_Spherical']['SSIM'].append(WSSSIM(image, F))
+			BUFFER['OLIVEIRA_Spherical']['BPP'].append(bpp(OliveiraSPrime2))
+
+			# RDCT PLANAR
+			QOliveiraForward = np2_round(divide(QOliveira, ZO_tiled))
+			QOliveiraBackward = np2_round(multiply(QOliveira, ZO_tiled))
+			OliveiraPPrime2 = multiply(around(divide(OliveiraPrime1, QOliveiraForward)), QOliveiraBackward)
+			OliveiraPPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPPrime2), TO)
+			G = clip(Tools.remount(OliveiraPPrime3, (h, w)), 0, 255)
+			OliveiraPPrime2 = OliveiraPPrime2.reshape(h, w)
+			BUFFER['OLIVEIRA_Planar']['PSNR'].append(WSPSNR(image, G))	
+			BUFFER['OLIVEIRA_Planar']['SSIM'].append(WSSSIM(image, G))
+			BUFFER['OLIVEIRA_Planar']['BPP'].append(bpp(OliveiraPPrime2))
+
 		processed_images += 1
 		results.append({'File name':file, 'Method':"JPEG Spherical", 'PSNR':BUFFER['JPEG_Spherical']['PSNR'], 'SSIM':BUFFER['JPEG_Spherical']['SSIM'], 'BPP':BUFFER['JPEG_Spherical']['BPP']})
-		results.append({'File name':file, 'Method':"Oliveira Spherical", 'PSNR':BUFFER['OLIVEIRA_Spherical']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_Spherical']['SSIM'], 'BPP':BUFFER['OLIVEIRA_Spherical']['BPP']})
+		results.append({'File name':file, 'Method':"JPEG Planar", 'PSNR':BUFFER['JPEG_Planar']['PSNR'], 'SSIM':BUFFER['JPEG_Planar']['SSIM'], 'BPP':BUFFER['JPEG_Planar']['BPP']})
 		results.append({'File name':file, 'Method':"Raiza Spherical", 'PSNR':BUFFER['RAIZA_Spherical']['PSNR'], 'SSIM':BUFFER['RAIZA_Spherical']['SSIM'], 'BPP':BUFFER['RAIZA_Spherical']['BPP']})
+		results.append({'File name':file, 'Method':"Raiza Planar", 'PSNR':BUFFER['RAIZA_Planar']['PSNR'], 'SSIM':BUFFER['RAIZA_Planar']['SSIM'], 'BPP':BUFFER['RAIZA_Planar']['BPP']})
+		results.append({'File name':file, 'Method':"Oliveira Spherical", 'PSNR':BUFFER['OLIVEIRA_Spherical']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_Spherical']['SSIM'], 'BPP':BUFFER['OLIVEIRA_Spherical']['BPP']})
+		results.append({'File name':file, 'Method':"Oliveira Planar", 'PSNR':BUFFER['OLIVEIRA_Planar']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_Planar']['SSIM'], 'BPP':BUFFER['OLIVEIRA_Planar']['BPP']})
+
+		"""(fig, axes) = plot.subplots(2, 2, figsize=(10, 10))
+		fig.suptitle(file)
+		axes[0,0].plot(BUFFER['JPEG_Spherical']['BPP'], BUFFER['JPEG_Spherical']['PSNR'], marker='.', color = 'black', ls='dashed', label='JPEG Spherical')
+		axes[0,0].plot(BUFFER['JPEG_Planar']['BPP'], BUFFER['JPEG_Planar']['PSNR'], marker='.', color = 'black', ls='solid', label='JPEG Planar')
+		axes[0,0].plot(BUFFER['OLIVEIRA_Spherical']['BPP'], BUFFER['OLIVEIRA_Spherical']['PSNR'], marker='.', color = 'red', ls='dashed', label='Oliveira Spherical')
+		axes[0,0].plot(BUFFER['OLIVEIRA_Planar']['BPP'], BUFFER['OLIVEIRA_Planar']['PSNR'], marker='.', color = 'red', ls='solid', label='Oliveira Planar')
+		axes[0,0].grid(True)
+		axes[0,0].set_xlabel('BPP'); axes[0,0].set_ylabel('PSNR')
+		axes[0,0].set_xlim(0, 3); axes[0,0].set_ylim(0.7, 50)
+		axes[0,0].legend()
+
+		axes[0,1].plot(BUFFER['JPEG_Spherical']['BPP'], BUFFER['JPEG_Spherical']['SSIM'], marker='.', color = 'black', ls='dashed', label='JPEG Spherical')
+		axes[0,1].plot(BUFFER['JPEG_Planar']['BPP'], BUFFER['JPEG_Planar']['SSIM'], marker='.', color = 'black', ls='solid', label='JPEG Planar')
+		axes[0,1].plot(BUFFER['OLIVEIRA_Spherical']['BPP'], BUFFER['OLIVEIRA_Spherical']['SSIM'], marker='.', color = 'red', ls='dashed', label='Oliveira Spherical')
+		axes[0,1].plot(BUFFER['OLIVEIRA_Planar']['BPP'], BUFFER['OLIVEIRA_Planar']['SSIM'], marker='.', color = 'red', ls='solid', label='Oliveira Planar')
+		axes[0,1].grid(True)
+		axes[0,1].set_xlabel('BPP'); axes[0,1].set_ylabel('SSIM')
+		axes[0,1].set_xlim(0, 3); axes[0,1].set_ylim(0.6, 1)
+		axes[0,1].legend()
+
+		axes[1,0].plot(BUFFER['JPEG_Spherical']['BPP'], BUFFER['JPEG_Spherical']['PSNR'], marker='.', color = 'black', ls='dashed', label='JPEG Spherical')
+		axes[1,0].plot(BUFFER['JPEG_Planar']['BPP'], BUFFER['JPEG_Planar']['PSNR'], marker='.', color = 'black', ls='solid', label='JPEG Planar')
+		axes[1,0].plot(BUFFER['RAIZA_Spherical']['BPP'], BUFFER['RAIZA_Spherical']['PSNR'], marker='.', color = 'blue', ls='dashed', label='Raiza Spherical')
+		axes[1,0].plot(BUFFER['RAIZA_Planar']['BPP'], BUFFER['RAIZA_Planar']['PSNR'], marker='.', color = 'blue', ls='solid', label='Raiza Planar')
+		axes[1,0].grid(True)
+		axes[1,0].set_xlabel('BPP'); axes[1,0].set_ylabel('PSNR')
+		axes[1,0].set_xlim(0, 3); axes[1,0].set_ylim(0.7, 50)
+		
+		axes[1,0].legend()
+
+		axes[1,1].plot(BUFFER['JPEG_Spherical']['BPP'], BUFFER['JPEG_Spherical']['SSIM'], marker='.', color = 'black', ls='dashed', label='JPEG Spherical')
+		axes[1,1].plot(BUFFER['JPEG_Planar']['BPP'], BUFFER['JPEG_Planar']['SSIM'], marker='.', color = 'black', ls='solid', label='JPEG Planar')
+		axes[1,1].plot(BUFFER['RAIZA_Spherical']['BPP'], BUFFER['RAIZA_Spherical']['SSIM'], marker='.', color = 'blue', ls='dashed', label='Raiza Spherical')
+		axes[1,1].plot(BUFFER['RAIZA_Planar']['BPP'], BUFFER['RAIZA_Planar']['SSIM'], marker='.', color = 'blue', ls='solid', label='Raiza Planar')
+		axes[1,1].grid(True)
+		axes[1,1].set_xlabel('BPP'); axes[1,1].set_ylabel('SSIM')
+		axes[1,1].set_xlim(0, 3); axes[1,1].set_ylim(0.6, 1)
+		axes[1,1].legend()
+		plot.tight_layout()
+		plot.show()"""
+
 
 results = sorted(results, key=itemgetter('File name'))
 fieldnames = ['File name', 'Method', 'PSNR', 'SSIM', 'BPP']
-with open('JPEG_Raiza_RDCT_Spherical_without_np2.csv', 'w') as csv_file:
+with open('Teste_Raiza_Oliveira_Spherical_X_Planar.csv', 'w') as csv_file:
 	writer = csv.DictWriter(csv_file, fieldnames)
 	writer.writeheader()
 	for result in results:

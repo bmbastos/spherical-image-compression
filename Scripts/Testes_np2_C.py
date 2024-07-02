@@ -212,7 +212,7 @@ files = os.listdir(path_images)
 for file in files:
 	while processed_images < target:
 		full_path = os.path.join(path_images, file)
-		if os.path.isfile(full_path) or processed_images < target:
+		if os.path.isfile(full_path):
 
 			image = imread(full_path, as_gray=True).astype(float)
 			if image.max() <= 1:

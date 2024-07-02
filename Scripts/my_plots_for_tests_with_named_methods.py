@@ -46,45 +46,17 @@ def averages(data_set: list, methods: list) -> dict:
 		style = 'solid'
 		if str.startswith(method, 'JPEG'):
 			color = 'black'
-		else:
-			color = 'purple'
+		elif str.startswith(method, 'Oliveira'):
+			color = 'red'
+		elif str.startswith(method, 'Brahimi'):
+			color = 'green'
+		elif str.startswith(method, 'Raiza'):
+			color = 'blue'
+		if 'Spherical' in method:
+			style = 'dashed'
+		elif 'Planar' in method:
 			style = 'solid'
-			if str.startswith(method, 'Oliveira'):
-				color = 'orange'
-				style = 'solid'
-			if str.startswith(method, 'Raiza'):
-				color = 'm'
-				style = 'solid'
-			else:
-				if len(methods) == 3:
-					if 'ZR' in method:
-						color = 'red'
-						style = 'solid'
-					if 'ZO' in method:
-						color = 'blue'
-						style = 'solid'
-				else:
-					if str.endswith(method, "})$"):
-						color = 'red'
-						style = 'solid'
-					if str.endswith(method, "phi)$"):
-						color = 'green'
-						style = 'dashed'
-					if str.endswith(method, "phi$"):
-						color = 'blue'
-						style = 'solid'
-
-			"""
-			if method == r"$\operatorname{np2}((\mathbf{Q})_\phi\bigstar\mathbf{ZR})$" or method == r"$\operatorname{np2}((\mathbf{Q})_\phi\bigstar\mathbf{ZO})$":
-				color = 'red'
-				style = 'solid'
-			if method == r"$\operatorname{np2}((\mathbf{Q}\bigstar\mathbf{ZR})_\phi)$" or method == r"$\operatorname{np2}((\mathbf{Q}\bigstar\mathbf{ZO})_\phi)$":
-				color = 'green'
-				style = 'dashed'
-			if method == r"$(\operatorname{np2}(\mathbf{Q})\bigstar\mathbf{ZR})_\phi$" or method == r"$(\operatorname{np2}(\mathbf{Q})\bigstar\mathbf{ZO})_\phi$":
-				color = 'blue'
-				style = 'solid'
-			"""
+			
 				
 		avgs[f'{method}']= {
 			'PSNR': array(avg_psnr) / n_images,
@@ -97,7 +69,7 @@ def averages(data_set: list, methods: list) -> dict:
 	
 
 # __MAIN__#
-target_file = 'JPEG_RDCTs_Spherical_with_np2.csv'
+target_file = 'Teste_Raiza_Oliveira_Spherical_X_Planar.csv'
 dataset, methods = pre_prossesing(target_file)
 methods = list(sort(methods))
 index_of_dct = methods.index("JPEG Spherical")
@@ -116,12 +88,12 @@ for avg in avgs:
 	ax1.set_xlabel('BPP'); ax1.set_ylabel('PSNR')
 	ax1.set_xlim(0, max_bpp)
 	ax1.set_ylim(min_psnr, max_psnr)
-	ax1.legend(methods)  # Não é necessário usar r"{}".format()
+	ax1.legend(methods)
 
 	ax2.plot(avgs[avg]['BPP'], avgs[avg]['SSIM'], marker='.', color = avgs[avg]['Color'], ls=avgs[avg]['Style'], label=avg)
 	ax2.grid(True)
 	ax2.set_xlabel('BPP'); ax2.set_ylabel('SSIM')
 	ax2.set_xlim(0, max_bpp)
 	ax2.set_ylim(min_ssim, 1)
-	ax2.legend(methods)  # Não é necessário usar r"{}".format()
+	ax2.legend(methods)
 plot.show()

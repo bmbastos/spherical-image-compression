@@ -283,7 +283,7 @@ for file in tqdm(files):
 		
 results = sorted(results, key=itemgetter('File name'))
 fieldnames = ['File name', 'Method', 'PSNR', 'SSIM', 'BPP']
-with open('JPEG_Raiza_SphericalMethods_in_SphericalImages_with_np2.csv', 'w') as csv_file:
+with open('JPEG_Raizas_SphericalMethods_in_SphericalImages_with_np2.csv', 'w') as csv_file:
 	writer = csv.DictWriter(csv_file, fieldnames)
 	writer.writeheader()
 	for result in results:
