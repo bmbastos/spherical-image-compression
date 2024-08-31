@@ -1,4 +1,6 @@
 import os
+import sys
+from pylab import *
 from scipy import signal
 from pdb import set_trace as pause
 from matplotlib import pyplot as plot
@@ -43,18 +45,27 @@ def averages(data_set: list, methods: list) -> dict:
 				avg_psnr = list(map(sum, zip(avg_psnr, data['PSNR'])))
 				avg_ssim = list(map(sum, zip(avg_ssim, data['SSIM'])))
 				avg_bpp = list(map(sum, zip(avg_bpp, data['BPP'])))
-		style = 'solid'
 		if str.startswith(method, 'JPEG'):
 			color = 'black'
+			style = 'solid'
 		else:
 			color = 'purple'
-			style = 'solid'
-			if str.startswith(method, 'Oliveira'):
-				color = 'orange'
+			style = 'dotted'
+			if str.startswith(method, 'OLIVEIRA'):
+				color = 'red'
+				style = 'dotted'
+			if str.startswith(method, 'BRAHIMI'):
+				color = 'green'
+				style = 'dotted'
+			if str.startswith(method, 'RAIZA'):
+				color = 'blue'
+				style = 'dotted'
+			
+
+			if str.endswith(method, '(R)'):
 				style = 'solid'
-			if str.startswith(method, 'Raiza'):
-				color = 'm'
-				style = 'solid'
+			
+			"""
 			else:
 				if len(methods) == 3:
 					if 'ZR' in method:
@@ -74,7 +85,7 @@ def averages(data_set: list, methods: list) -> dict:
 						color = 'blue'
 						style = 'solid'
 
-			"""
+			
 			if method == r"$\operatorname{np2}((\mathbf{Q})_\phi\bigstar\mathbf{ZR})$" or method == r"$\operatorname{np2}((\mathbf{Q})_\phi\bigstar\mathbf{ZO})$":
 				color = 'red'
 				style = 'solid'
@@ -97,10 +108,10 @@ def averages(data_set: list, methods: list) -> dict:
 	
 
 # __MAIN__#
-target_file = 'JPEG_RDCTs_Spherical_with_np2.csv'
+target_file = 'original_proposes.csv'
 dataset, methods = pre_prossesing(target_file)
 methods = list(sort(methods))
-index_of_dct = methods.index("JPEG Spherical")
+index_of_dct = methods.index("JPEG")
 methods.insert(0, methods.pop(index_of_dct))
 avgs = averages(dataset, methods)
 max_psnr = round(max([max(avgs[avg]['PSNR']) for avg in avgs])) + 3
@@ -110,17 +121,21 @@ min_ssim = min([min(avgs[avg]['SSIM']) for avg in avgs]) - 0.03
 fig = plot.figure(label=target_file)
 ax1 = fig.add_axes([0.1, 0.1 , 0.4, 0.8])
 ax2 = fig.add_axes([0.55, 0.1 , 0.4, 0.8])
+plot.rcParams['font.family'] = 'Times New Roman'
+plot.rcParams['font.size'] = 16
+plot.rcParams.update({"text.usetex": True})
+plot.rcParams["figure.figsize"] = (3.4, 2.55)
 for avg in avgs:
-	ax1.plot(avgs[avg]['BPP'], avgs[avg]['PSNR'], marker='.', color = avgs[avg]['Color'], ls=avgs[avg]['Style'], label=avg)
+	ax1.plot(avgs[avg]['BPP'], avgs[avg]['PSNR'], marker='.', color = avgs[avg]['Color'], ls=avgs[avg]['Style'], label=avg, linewidth=2)
 	ax1.grid(True)
-	ax1.set_xlabel('BPP'); ax1.set_ylabel('PSNR')
+	ax1.set_xlabel('BPP'); ax1.set_ylabel('WS-PSNR (dB)')
 	ax1.set_xlim(0, max_bpp)
 	ax1.set_ylim(min_psnr, max_psnr)
 	ax1.legend(methods)  # Não é necessário usar r"{}".format()
 
-	ax2.plot(avgs[avg]['BPP'], avgs[avg]['SSIM'], marker='.', color = avgs[avg]['Color'], ls=avgs[avg]['Style'], label=avg)
+	ax2.plot(avgs[avg]['BPP'], avgs[avg]['SSIM'], marker='.', color = avgs[avg]['Color'], ls=avgs[avg]['Style'], label=avg, linewidth=2)
 	ax2.grid(True)
-	ax2.set_xlabel('BPP'); ax2.set_ylabel('SSIM')
+	ax2.set_xlabel('BPP'); ax2.set_ylabel('WS-SSIM (dB)')
 	ax2.set_xlim(0, max_bpp)
 	ax2.set_ylim(min_ssim, 1)
 	ax2.legend(methods)  # Não é necessário usar r"{}".format()

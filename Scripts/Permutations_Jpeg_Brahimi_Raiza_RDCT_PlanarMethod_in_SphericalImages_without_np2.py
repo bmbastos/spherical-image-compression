@@ -223,6 +223,7 @@ for file in tqdm(files):
 		ZR_tiled = tile(asarray([ZR]), (A.shape[0], 1, 1))
 
 		BUFFER = {'JPEG_Planar': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+					'BRAHIMI_Planar': {'PSNR':[], 'SSIM':[], 'BPP':[]},
 					'OLIVEIRA_Planar': {'PSNR':[], 'SSIM':[], 'BPP':[]},
 					'RAIZA_Planar': {'PSNR':[], 'SSIM':[], 'BPP':[]}}
 
@@ -241,36 +242,47 @@ for file in tqdm(files):
 			BUFFER['JPEG_Planar']['BPP'].append(bpp(JPPrime2))
 
 			
-			# RAIZA E RDCT PLANARES
+			# BRAHIMI, RAIZA E RDCT PLANARES
+
+			QPhiBrahimiForward = divide(QOliveira, ZB_tiled)
+			QPhiBrahimiBackward = multiply(QOliveira, ZB_tiled)
+			BrahimiPrime2 = multiply(around(divide(BrahimiPrime1, QPhiBrahimiForward)), QPhiBrahimiBackward)
+			BrahimiPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, BrahimiPrime2), TB)
+			C = clip(Tools.remount(BrahimiPrime3, (h, w)), 0, 255)
+			BrahimiPrime2 = BrahimiPrime2.reshape(h, w)
+			BUFFER['BRAHIMI_Planar']['PSNR'].append(peak_signal_noise_ratio(image, C, data_range=255))
+			BUFFER['BRAHIMI_Planar']['SSIM'].append(structural_similarity(image, C, data_range=255))
+			BUFFER['BRAHIMI_Planar']['BPP'].append(bpp(BrahimiPrime2))
 			
 			QPhiRaizaForward = divide(QOliveira, ZR_tiled)
 			QPhiRaizaBackward = multiply(QOliveira, ZR_tiled)
 			RaizaPrime2 = multiply(around(divide(RaizaPrime1, QPhiRaizaForward)), QPhiRaizaBackward)
 			RaizaPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaPrime2), TR)
-			C = clip(Tools.remount(RaizaPrime3, (h, w)), 0, 255)
+			D = clip(Tools.remount(RaizaPrime3, (h, w)), 0, 255)
 			RaizaPrime2 = RaizaPrime2.reshape(h, w)
-			BUFFER['RAIZA_Planar']['PSNR'].append(peak_signal_noise_ratio(image, C, data_range=255))
-			BUFFER['RAIZA_Planar']['SSIM'].append(structural_similarity(image, C, data_range=255))
+			BUFFER['RAIZA_Planar']['PSNR'].append(peak_signal_noise_ratio(image, D, data_range=255))
+			BUFFER['RAIZA_Planar']['SSIM'].append(structural_similarity(image, D, data_range=255))
 			BUFFER['RAIZA_Planar']['BPP'].append(bpp(RaizaPrime2))
 
 			QPhiOliveiraPlanarForward = divide(QOliveira, ZO_tiled)
 			QPhiOliveiraPlanarBackward = multiply(QOliveira, ZO_tiled)
 			OliveiraPlanarPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraPlanarForward)), QPhiOliveiraPlanarBackward)
 			OliveiraPlanarPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPlanarPrime2), TO)
-			D = clip(Tools.remount(OliveiraPlanarPrime3, (h, w)), 0, 255)
+			E = clip(Tools.remount(OliveiraPlanarPrime3, (h, w)), 0, 255)
 			OliveiraPlanarPrime2 = OliveiraPlanarPrime2.reshape(h, w)
-			BUFFER['OLIVEIRA_Planar']['PSNR'].append(peak_signal_noise_ratio(image, D, data_range=255))
-			BUFFER['OLIVEIRA_Planar']['SSIM'].append(structural_similarity(image, D, data_range=255))
+			BUFFER['OLIVEIRA_Planar']['PSNR'].append(peak_signal_noise_ratio(image, E, data_range=255))
+			BUFFER['OLIVEIRA_Planar']['SSIM'].append(structural_similarity(image, E, data_range=255))
 			BUFFER['OLIVEIRA_Planar']['BPP'].append(bpp(OliveiraPlanarPrime2))
 		
 		processed_images += 1
 		results.append({'File name':file, 'Method':"JPEG Planar", 'PSNR':BUFFER['JPEG_Planar']['PSNR'], 'SSIM':BUFFER['JPEG_Planar']['SSIM'], 'BPP':BUFFER['JPEG_Planar']['BPP']})
+		results.append({'File name':file, 'Method':"Brahimi Planar", 'PSNR':BUFFER['BRAHIMI_Planar']['PSNR'], 'SSIM':BUFFER['BRAHIMI_Planar']['SSIM'], 'BPP':BUFFER['BRAHIMI_Planar']['BPP']})
 		results.append({'File name':file, 'Method':"Oliveira Planar", 'PSNR':BUFFER['OLIVEIRA_Planar']['PSNR'], 'SSIM':BUFFER['OLIVEIRA_Planar']['SSIM'], 'BPP':BUFFER['OLIVEIRA_Planar']['BPP']})
 		results.append({'File name':file, 'Method':"Raiza Planar", 'PSNR':BUFFER['RAIZA_Planar']['PSNR'], 'SSIM':BUFFER['RAIZA_Planar']['SSIM'], 'BPP':BUFFER['RAIZA_Planar']['BPP']})
 
 results = sorted(results, key=itemgetter('File name'))
 fieldnames = ['File name', 'Method', 'PSNR', 'SSIM', 'BPP']
-with open('JPEG_Raiza_RDCT_Planar_without_np2.csv', 'w') as csv_file:
+with open('JPEG_Brahimi_Raiza_RDCT_Planar_without_np2.csv', 'w') as csv_file:
 	writer = csv.DictWriter(csv_file, fieldnames)
 	writer.writeheader()
 	for result in results:
