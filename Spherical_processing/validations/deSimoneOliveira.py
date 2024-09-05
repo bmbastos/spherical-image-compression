@@ -256,7 +256,7 @@ for file in tqdm(files):
 
 			# -----------------------------------------------------------------------------------------------------------------------
 
-			"""
+			
 			# Oliveira with QPhi (Matematicamente correta)
 			QPhiOliveiraForward = np2_round(divide(QPhiOliveira, ZO_tiled))
 			QPhiOliveiraBackward = np2_round(multiply(QPhiOliveira, ZO_tiled))
@@ -268,6 +268,7 @@ for file in tqdm(files):
 			BUFFER['OLIVEIRA']['SSIM'].append(WSSSIM(image, C))
 			BUFFER['OLIVEIRA']['BPP'].append(bpp(OliveiraPrime2))
 
+"""
 			# Oliveira with QPhi (Aplicação de QPhi em np2 de q_forward)
 			QPhiOliveiraForward = prepareQPhi(image, np2_round(divide(QOliveira, ZO)))
 			QPhiOliveiraBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZO)))

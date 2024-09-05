@@ -3,3 +3,5 @@ Images_for_tests/
 *__pycache__/
 *.md
 *.csv
+*.pdf
+*.xdot
