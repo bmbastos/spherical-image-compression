@@ -49,15 +49,20 @@ def averages(data_set: list, methods: list) -> dict:
 
 		if method.startswith('JPEG'):
 			color, style = 'black', 'solid'
+			method = r'JPEG [6]'
 		elif method.startswith('OLIVEIRA'):
 			color, style = 'red', 'dotted'
+			method = r'Oliveira et al. [11]'
 		elif method.startswith('BRAHIMI'):
 			color, style = 'green', 'dotted'
+			method = r'Brahimi et al. [12]'
 		elif method.startswith('RAIZA'):
+			color, style = 'magenta', 'dotted'
+			method = r'Raiza et al. [9]'
+		elif method.startswith('DE SIMONE'):
 			color, style = 'blue', 'dotted'
-		else:
-			color, style = 'orange', 'dotted'
-			
+			method = r'De Simone et al. [2]'
+
 
 		avgs[method] = {
 			'PSNR': avg_psnr / n_images,
@@ -81,31 +86,36 @@ min_psnr = round(min(min(avgs[avg]['PSNR']) for avg in avgs)) - 3
 min_ssim = min(min(avgs[avg]['SSIM']) for avg in avgs) - 0.03
 
 plt.rcParams['font.family'] = 'Times New Roman'
-#plt.rcParams['font.size'] = 16
+plt.rcParams['font.size'] = 7
 plt.rcParams['text.usetex'] = True
 plt.rcParams["figure.figsize"] = (3.4, 2.55)
 
 # Plot WS-PSNR
 for avg in avgs:
+	if avg.startswith('Raiza'):
+		continue
 	plt.plot(avgs[avg]['BPP'], avgs[avg]['PSNR'], marker='.', color=avgs[avg]['Color'], 
 			ls=avgs[avg]['Style'], label=avg, linewidth=2)
-plt.xlabel('BPP')
+plt.xlabel('Bitrate (bpp)')
 plt.ylabel('WS-PSNR (dB)')
 plt.xlim(0, max_bpp)
 plt.ylim(min_psnr, max_psnr)
-plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left', ncols=5, mode="expand", borderaxespad=0.)
-plt.savefig('bastos_WS-PSNR_original_proposes.pdf', bbox_inches='tight', pad_inches=0)
+plt.legend(frameon=False, bbox_to_anchor=(0.49, 0.5))
+plt.savefig('bastos_WS-PSNR_' + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
 plt.show()
-"""
+
 # Plot WS-SSIM
 for avg in avgs:
+	if avg.startswith('Raiza'):
+		continue
 	plt.plot(avgs[avg]['BPP'], avgs[avg]['SSIM'], marker='.', color=avgs[avg]['Color'], 
 			ls=avgs[avg]['Style'], label=avg, linewidth=2)
-plt.xlabel('BPP')
+plt.xlabel('Bitrate (bpp)')
 plt.ylabel('WS-SSIM (dB)')
 plt.xlim(0, max_bpp)
 plt.ylim(min_ssim, 1)
-plt.legend(mode='expand', ncol=5, loc='lower center')
-plt.savefig('bastos_WS-SSIM_original_proposes.pdf', bbox_inches='tight', pad_inches=0)
+plt.legend(frameon=False, bbox_to_anchor=(0.49, 0.5))
+plt.savefig('bastos_WS-SSIM_'  + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
 plt.show()
-"""
+
+
