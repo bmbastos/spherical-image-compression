@@ -191,7 +191,7 @@ def WSPSNR(img1, img2, max = 255.): # img1 e img2 devem ter shape hx2h e ser em 
 
 # MAIN --------------------------------------------------------------------------------------------------
 # Pré processamento
-path_images = "../Images_for_tests/Spherical/"
+path_images = "../ImagesForTest/Spherical/"
 T = calculate_matrix_of_transformation(8)
 SO, so = compute_scale_matrix(TO)
 SB, sb = compute_scale_matrix(TB)
@@ -214,10 +214,8 @@ for file in tqdm(files):
 		image = around(255*image)
 	h, w = image.shape
 	A = Tools.umount(image, (8, 8))# - 128
-	JpegPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T)
-	OliveiraPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO, A), TO.T)
-	BrahimiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB, A), TB.T)
-	RaizaPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
+	print(file, h, w)
+
 	ZT_tiled = tile(asarray([T]), (A.shape[0], 1, 1))
 	ZO_tiled = tile(asarray([ZO]), (A.shape[0], 1, 1))
 	ZB_tiled = tile(asarray([ZB]), (A.shape[0], 1, 1))
@@ -232,22 +230,21 @@ for file in tqdm(files):
 
 	for QF in quantization_factor:
 		QOliveira = adjust_quantization(QF, Q0)
-		QBrahimi = adjust_quantization(QF, QB)
-		QPhiOliveira = prepareQPhi(image, QOliveira)
 		
-		# JPEG PLANAR
-		JPPrime2 = multiply(around(divide(JpegPrime1, QOliveira)), QOliveira)
-		JPPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, JPPrime2), T)
-		B = clip(Tools.remount(JPPrime3, (h, w)), 0, 255)
-		JPPrime2 = JPPrime2.reshape(h, w)
+		# JPEG
+		JpegPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T)
+		JpegPrime2 = multiply(around(divide(JpegPrime1, QOliveira)), QOliveira)
+		JpegPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, JpegPrime2), T)
+		B = clip(Tools.remount(JpegPrime3, (h, w)), 0, 255)
+		JpegPrime2 = JpegPrime2.reshape(h, w)
 		BUFFER['JPEG']['PSNR'].append(WSPSNR(image, B))
 		BUFFER['JPEG']['SSIM'].append(WSSSIM(image, B))
-		BUFFER['JPEG']['BPP'].append(bpp(JPPrime2))
-
-		
-		# RDCT, BRAHIMI, RAIZA E DE SIMONE
+		BUFFER['JPEG']['BPP'].append(bpp(JpegPrime2))
+		del JpegPrime1; del JpegPrime2; del JpegPrime3; del B
+	
 
 		# OLIVEIRA
+		OliveiraPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO, A), TO.T)
 		QOliveiraForward = np2_round(divide(QOliveira, ZO_tiled))
 		QOliveiraBackward = np2_round(multiply(QOliveira, ZO_tiled))
 		OliveiraPrime2 = multiply(around(divide(OliveiraPrime1, QOliveiraForward)), QOliveiraBackward)
@@ -257,8 +254,12 @@ for file in tqdm(files):
 		BUFFER['OLIVEIRA']['PSNR'].append(WSPSNR(image, C))
 		BUFFER['OLIVEIRA']['SSIM'].append(WSSSIM(image, C))
 		BUFFER['OLIVEIRA']['BPP'].append(bpp(OliveiraPrime2))
+		del OliveiraPrime1; del OliveiraPrime2; del OliveiraPrime3; del C; del QOliveiraForward; del QOliveiraBackward
 		
+
 		# BRAHIMI
+		QBrahimi = adjust_quantization(QF, QB)
+		BrahimiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB, A), TB.T)
 		QBrahimiForward = np2_ceil(divide(QBrahimi, ZB_tiled))
 		QBrahimiBackward = np2_ceil(multiply(QBrahimi, ZB_tiled))
 		BrahimiPrime2 = multiply(around(divide(BrahimiPrime1, QBrahimiForward)), QBrahimiBackward)
@@ -268,8 +269,11 @@ for file in tqdm(files):
 		BUFFER['BRAHIMI']['PSNR'].append(WSPSNR(image, D))
 		BUFFER['BRAHIMI']['SSIM'].append(WSSSIM(image, D))
 		BUFFER['BRAHIMI']['BPP'].append(bpp(BrahimiPrime2))
+		del BrahimiPrime1; del BrahimiPrime2; del BrahimiPrime3; del D; del QBrahimiForward; del QBrahimiBackward; del QBrahimi
+
 
 		# RAIZA
+		RaizaPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
 		QRaizaForward = divide(QOliveira, ZR_tiled)
 		QRaizaBackward = multiply(QOliveira, ZR_tiled)
 		RaizaPrime2 = multiply(around(divide(RaizaPrime1, QRaizaForward)), QRaizaBackward)
@@ -279,15 +283,20 @@ for file in tqdm(files):
 		BUFFER['RAIZA']['PSNR'].append(WSPSNR(image, E))
 		BUFFER['RAIZA']['SSIM'].append(WSSSIM(image, E))
 		BUFFER['RAIZA']['BPP'].append(bpp(RaizaPrime2))
+		del RaizaPrime1; del RaizaPrime2; del RaizaPrime3; del E; del QRaizaForward; del QRaizaBackward; 
+
 
 		# DE SIMONE
-		PhiPrime2 = multiply(around(divide(JpegPrime1, QPhiOliveira)), QPhiOliveira)
+		QPhiOliveira = prepareQPhi(image, QOliveira)
+		PhiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T)
+		PhiPrime2 = multiply(around(divide(PhiPrime1, QPhiOliveira)), QPhiOliveira)
 		PhiPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, PhiPrime2), T)
 		F = clip(Tools.remount(PhiPrime3, (h, w)), 0, 255)
 		PhiPrime2 = PhiPrime2.reshape(h, w)
 		BUFFER['DE_SIMONE']['PSNR'].append(WSPSNR(image, F))
 		BUFFER['DE_SIMONE']['SSIM'].append(WSSSIM(image, F))
 		BUFFER['DE_SIMONE']['BPP'].append(bpp(PhiPrime2))
+		del PhiPrime1; del PhiPrime2; del PhiPrime3; del F; del QPhiOliveira
 	
 	processed_images += 1
 	results.append({'File name':file, 'Method':"JPEG", 'PSNR':BUFFER['JPEG']['PSNR'], 'SSIM':BUFFER['JPEG']['SSIM'], 'BPP':BUFFER['JPEG']['BPP']})
@@ -295,6 +304,7 @@ for file in tqdm(files):
 	results.append({'File name':file, 'Method':"BRAHIMI", 'PSNR':BUFFER['BRAHIMI']['PSNR'], 'SSIM':BUFFER['BRAHIMI']['SSIM'], 'BPP':BUFFER['BRAHIMI']['BPP']})
 	results.append({'File name':file, 'Method':"RAIZA", 'PSNR':BUFFER['RAIZA']['PSNR'], 'SSIM':BUFFER['RAIZA']['SSIM'], 'BPP':BUFFER['RAIZA']['BPP']})
 	results.append({'File name':file, 'Method':"DE_SIMONE", 'PSNR':BUFFER['DE_SIMONE']['PSNR'], 'SSIM':BUFFER['DE_SIMONE']['SSIM'], 'BPP':BUFFER['DE_SIMONE']['BPP']})
+	
 
 results = sorted(results, key=itemgetter('File name'))
 fieldnames = ['File name', 'Method', 'PSNR', 'SSIM', 'BPP']

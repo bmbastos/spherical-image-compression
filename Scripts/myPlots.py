@@ -52,14 +52,14 @@ def averages(data_set: list, methods: list) -> dict:
 			method = r'JPEG [6]'
 		elif method.startswith('OLIVEIRA'):
 			color, style = 'red', 'dotted'
-			method = r'Oliveira et al. [11]'
+			method = r'Oliveira et al. [7]'
 		elif method.startswith('BRAHIMI'):
 			color, style = 'green', 'dotted'
-			method = r'Brahimi et al. [12]'
+			method = r'Brahimi et al. [8]'
 		elif method.startswith('RAIZA'):
 			color, style = 'magenta', 'dotted'
 			method = r'Raiza et al. [9]'
-		elif method.startswith('DE SIMONE'):
+		elif method.startswith('DE_SIMONE'):
 			color, style = 'blue', 'dotted'
 			method = r'De Simone et al. [2]'
 
