@@ -74,7 +74,7 @@ def averages(data_set: list, methods: list) -> dict:
 	return avgs
 
 # __MAIN__#
-target_file = "original_proposes.csv"
+target_file = "our_proposal.csv"
 dataset, methods = pre_processing(target_file)
 methods.sort()
 methods.insert(0, methods.pop(methods.index("JPEG")))
