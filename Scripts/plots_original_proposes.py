@@ -80,7 +80,7 @@ methods.sort()
 methods.insert(0, methods.pop(methods.index("JPEG")))
 avgs = averages(dataset, methods)
 
-max_psnr = round(max(max(avgs[avg]['PSNR']) for avg in avgs)) + 3
+max_psnr = round(max(max(avgs[avg]['PSNR']) for avg in avgs)) + 5
 max_bpp = ceil(max(max(avgs[avg]['BPP']) for avg in avgs))
 min_psnr = round(min(min(avgs[avg]['PSNR']) for avg in avgs)) - 3
 min_ssim = min(min(avgs[avg]['SSIM']) for avg in avgs) - 0.03
@@ -92,28 +92,30 @@ plt.rcParams["figure.figsize"] = (3.4, 2.55)
 
 # Plot WS-PSNR
 for avg in avgs:
-	#if avg.startswith('Raiza'): continue;
+	if avg.startswith('Raiza'): continue;
 	plt.plot(avgs[avg]['BPP'], avgs[avg]['PSNR'], marker='.', color=avgs[avg]['Color'], 
-			ls=avgs[avg]['Style'], label=avg, linewidth=2)
+			ls=avgs[avg]['Style'], label=avg, linewidth=1)
 plt.xlabel('Bitrate (bpp)')
 plt.ylabel('WS-PSNR (dB)')
-plt.xlim(0, max_bpp)
+plt.xlim(0, 2.5)
 plt.ylim(min_psnr, max_psnr)
 plt.legend(frameon=False, bbox_to_anchor=(0.49, 0.5))
 plt.savefig('bastos_WS-PSNR_' + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
-plt.show()
+#plt.show()
+plt.clf()
+plt.cla()
 
 # Plot WS-SSIM
 for avg in avgs:
-	#if avg.startswith('Raiza'): continue;
+	if avg.startswith('Raiza'): continue;
 	plt.plot(avgs[avg]['BPP'], avgs[avg]['SSIM'], marker='.', color=avgs[avg]['Color'], 
-			ls=avgs[avg]['Style'], label=avg, linewidth=2)
+			ls=avgs[avg]['Style'], label=avg, linewidth=1)
 plt.xlabel('Bitrate (bpp)')
 plt.ylabel('WS-SSIM (dB)')
-plt.xlim(0, max_bpp)
+plt.xlim(0, 2.5)
 plt.ylim(min_ssim, 1)
-plt.legend(frameon=False, bbox_to_anchor=(0.49, 0.5))
+plt.legend(frameon=False, bbox_to_anchor=(0.49, 0.7))
 plt.savefig('bastos_WS-SSIM_'  + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
-plt.show()
+#plt.show()
 
 

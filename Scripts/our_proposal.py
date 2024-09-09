@@ -283,13 +283,12 @@ for file in tqdm(files):
 		BUFFER['RAIZA']['PSNR'].append(WSPSNR(image, E))
 		BUFFER['RAIZA']['SSIM'].append(WSSSIM(image, E))
 		BUFFER['RAIZA']['BPP'].append(bpp(RaizaPrime2))
-		del RaizaPrime1; del RaizaPrime2; del RaizaPrime3; del E; del QRaizaForward; del QRaizaBackward; del QOliveira
+		del RaizaPrime1; del RaizaPrime2; del RaizaPrime3; del E; del QRaizaForward; del QRaizaBackward
 
 		# BRAHIMI
-		QBrahimi = adjust_quantization(QF, QB)
 		BrahimiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB, A), TB.T)
-		QBrahimiForward = prepareQPhi(image, np2_round(divide(QBrahimi, ZB)))
-		QBrahimiBackward = prepareQPhi(image, np2_round(multiply(QBrahimi, ZB)))
+		QBrahimiForward = prepareQPhi(image, np2_round(divide(QOliveira, ZB)))
+		QBrahimiBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZB)))
 		BrahimiPrime2 = multiply(around(divide(BrahimiPrime1, QBrahimiForward)), QBrahimiBackward)
 		BrahimiPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, BrahimiPrime2), TB)
 		F = clip(Tools.remount(BrahimiPrime3, (h, w)), 0, 255)
@@ -297,7 +296,7 @@ for file in tqdm(files):
 		BUFFER['BRAHIMI']['PSNR'].append(WSPSNR(image, F))
 		BUFFER['BRAHIMI']['SSIM'].append(WSSSIM(image, F))
 		BUFFER['BRAHIMI']['BPP'].append(bpp(BrahimiPrime2))
-		del BrahimiPrime1; del BrahimiPrime2; del BrahimiPrime3; del F; del QBrahimiForward; del QBrahimiBackward; del QBrahimi
+		del BrahimiPrime1; del BrahimiPrime2; del BrahimiPrime3; del F; del QBrahimiForward; del QBrahimiBackward; del QOliveira
 
 	
 	processed_images += 1
