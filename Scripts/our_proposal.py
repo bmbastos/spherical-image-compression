@@ -6,7 +6,7 @@ from skimage.io import imread
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from skimage.transform import resize as resize2
 from scipy import signal
-from matplotlib import pyplot as plot
+from matplotlib import pyplot as plt
 from pdb import set_trace as pause
 from tqdm import tqdm
 from operator import itemgetter
@@ -211,8 +211,8 @@ for file in tqdm(files):
 	if os.path.isfile(full_path) == False: continue
 
 	image = imread(full_path, as_gray=True).astype(float)
-	image = resize2(image, (128, 256), anti_aliasing=True)
-	#plot.imshow(image, cmap='gray'); plot.show()
+	#image = resize2(image, (128, 256), anti_aliasing=True)
+	#plt.imshow(image, cmap='gray'); plt.show()
 
 	if image.max() <= 1:
 		image = around(255*image)

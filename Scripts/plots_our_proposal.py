@@ -113,7 +113,7 @@ plt.xlabel('Bitrate (bpp)')
 plt.ylabel('WS-SSIM (dB)')
 plt.xlim(0, 2.5)
 plt.ylim(min_ssim, 1)
-plt.legend(frameon=False, ncols=1, bbox_to_anchor=(0.45, 0.45))
+plt.legend(frameon=False, ncols=1, bbox_to_anchor=(0.45, 0.4))
 plt.savefig('bastos_WS-SSIM_'  + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
 #plt.show()
 
