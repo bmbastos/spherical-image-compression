@@ -235,8 +235,10 @@ for file in files:
 
 	image = imread(full_path, as_gray=True).astype(float)
 	plt.axis('off'); plt.imshow(image, cmap='gray')
-	plt.savefig(file.split('.')[0] + '.png', bbox_inches='tight', pad_inches=0)
+	#plt.savefig(file.split('.')[0] + '.png',format='png', bbox_inches='tight', pad_inches=0)
+	plt.imsave(file.split('.')[0] + '.png', image, cmap='gray')
 	plt.clf()
+	pause()
 
 	if image.max() <= 1:
 		image = around(255*image)
@@ -262,7 +264,8 @@ for file in files:
 	print(qfs['DE_SIMONE'][1])
 	plt.axis('off')
 	plt.imshow(C, cmap='gray')
-	plt.savefig('IMG_DE_SIMONE_' + file.split('.')[0] + '.png', bbox_inches='tight', pad_inches=0)
+	#plt.savefig('IMG_DE_SIMONE_' + file.split('.')[0] + '.png', bbox_inches='tight', pad_inches=0)
+	plt.imsave('IMG_DE_SIMONE_' + file.split('.')[0] + '.png', C, cmap='gray')
 	plt.clf()
 	del PhiPrime1; del PhiPrime2; del PhiPrime3; del C; del QPhiOliveira; del QOliveira; print()
 
@@ -280,7 +283,8 @@ for file in files:
 	print(qfs['OLIVEIRA'][1])
 	plt.axis('off')
 	plt.imshow(D, cmap='gray')
-	plt.savefig('IMG_OLIVEIRA_' + file.split('.')[0] + '.png', bbox_inches='tight', pad_inches=0)
+	#plt.savefig('IMG_OLIVEIRA_' + file.split('.')[0] + '.png', bbox_inches='tight', pad_inches=0)
+	plt.imsave('IMG_OLIVEIRA_' + file.split('.')[0] + '.png', D, cmap='gray')
 	plt.clf()
 	del OliveiraPrime1; del OliveiraPrime2; del OliveiraPrime3; del D; del QOliveiraForward; del QOliveiraBackward; del QOliveira; print()
 
@@ -298,7 +302,8 @@ for file in files:
 	print(qfs['RAIZA'][1])
 	plt.axis('off')
 	plt.imshow(E, cmap='gray')
-	plt.savefig('IMG_RAIZA_' + file.split('.')[0] + '.png', bbox_inches='tight', pad_inches=0)
+	#plt.savefig('IMG_RAIZA_' + file.split('.')[0] + '.png', bbox_inches='tight', pad_inches=0)
+	plt.imsave('IMG_RAIZA_' + file.split('.')[0] + '.png', E, cmap='gray')
 	plt.clf()
 	del RaizaPrime1; del RaizaPrime2; del RaizaPrime3; del E; del QRaizaForward; del QRaizaBackward; del QOliveira; print()
 
@@ -316,6 +321,7 @@ for file in files:
 	print(qfs['BRAHIMI'][1])
 	plt.axis('off')
 	plt.imshow(F, cmap='gray')
-	plt.savefig('IMG_BRAHIMI_' + file.split('.')[0] + '.png', bbox_inches='tight', pad_inches=0)
+	#plt.savefig('IMG_BRAHIMI_' + file.split('.')[0] + '.png', bbox_inches='tight', pad_inches=0)
+	plt.imsave('IMG_BRAHIMI_' + file.split('.')[0] + '.png', F, cmap='gray')
 	plt.clf()
 	del BrahimiPrime1; del BrahimiPrime2; del BrahimiPrime3; del F; del QBrahimiForward; del QBrahimiBackward; del QOliveira
