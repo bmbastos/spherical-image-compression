@@ -1,4 +1,5 @@
 Images_for_tests/
+myenv/
 *HelpingCodes/
 *__pycache__/
 *.md

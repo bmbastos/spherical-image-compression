@@ -110,7 +110,7 @@ for avg in avgs:
 	plt.plot(avgs[avg]['BPP'], avgs[avg]['SSIM'], marker='.', color=avgs[avg]['Color'], 
 			ls=avgs[avg]['Style'], label=avg, linewidth=1)
 plt.xlabel('Bitrate (bpp)')
-plt.ylabel('WS-SSIM (dB)')
+plt.ylabel('WS-SSIM')
 plt.xlim(0, 2.5)
 plt.ylim(min_ssim, 1)
 plt.legend(frameon=False, ncols=1, bbox_to_anchor=(0.45, 0.4))
