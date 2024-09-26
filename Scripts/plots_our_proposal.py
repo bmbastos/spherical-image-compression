@@ -60,7 +60,7 @@ def averages(data_set: list, methods: list) -> dict:
 			method = 'Proposed I'
 		elif method.startswith('DE_SIMONE'):
 			color, style = 'blue', 'solid'
-			method = r'De Simone et al. [2]'
+			method = r'De Simone et al. [6]'
 
 
 		avgs[method] = {
