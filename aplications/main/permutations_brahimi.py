@@ -237,13 +237,13 @@ for file in files:
 
 		for QF in quantization_factor:
 			QOliveira = adjust_quantization(QF, Q0)
-			Prime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO, A), TO.T)
+			Prime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB, A), TB.T)
 			
 			# P2 = np2(adj(phi(Q), Z))
-			QP2Forward = np2_round(divide(prepareQPhi(image, QOliveira), ZO_tiled))
-			QP2Backward = np2_round(multiply(prepareQPhi(image, QOliveira), ZO_tiled))
+			QP2Forward = np2_round(divide(prepareQPhi(image, QOliveira), ZB_tiled))
+			QP2Backward = np2_round(multiply(prepareQPhi(image, QOliveira), ZB_tiled))
 			P2Prime2 = multiply(around(divide(Prime1, QP2Forward)), QP2Backward)
-			P2Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, P2Prime2), TO)
+			P2Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, P2Prime2), TB)
 			C = clip(Tools.remount(P2Prime3, (h, w)), 0, 255)
 			P2Prime2 = P2Prime2.reshape(h, w)
 			BUFFER[permutations[0]]['PSNR'].append(WSPSNR(image, C))
@@ -252,10 +252,10 @@ for file in files:
 			del P2Prime2; del P2Prime3; del QP2Forward; del QP2Backward; del C
 
 			# P3 = phi(np2(adj(Q, Z)))
-			QP3Forward = prepareQPhi(image, np2_round(divide(QOliveira, ZO)))
-			QP3Backward = prepareQPhi(image, np2_round(multiply(QOliveira, ZO)))
+			QP3Forward = prepareQPhi(image, np2_round(divide(QOliveira, ZB)))
+			QP3Backward = prepareQPhi(image, np2_round(multiply(QOliveira, ZB)))
 			P3Prime2 = multiply(around(divide(Prime1, QP3Forward)), QP3Backward)
-			P3Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, P3Prime2), TO)
+			P3Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, P3Prime2), TB)
 			D = clip(Tools.remount(P3Prime3, (h, w)), 0, 255)
 			P3Prime2 = P3Prime2.reshape(h, w)
 			BUFFER[permutations[1]]['PSNR'].append(WSPSNR(image, D))
@@ -264,10 +264,10 @@ for file in files:
 			del P3Prime2; del P3Prime3; del QP3Forward; del QP3Backward; del D
 
 			# P4 = np2(phi(adj(Q, Z)))
-			QP4Forward = np2_round(prepareQPhi(image, divide(QOliveira, ZO)))
-			QP4Backward = np2_round(prepareQPhi(image, multiply(QOliveira, ZO)))
+			QP4Forward = np2_round(prepareQPhi(image, divide(QOliveira, ZB)))
+			QP4Backward = np2_round(prepareQPhi(image, multiply(QOliveira, ZB)))
 			P4Prime2 = multiply(around(divide(Prime1, QP4Forward)), QP4Backward)
-			P4Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, P4Prime2), TO)
+			P4Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, P4Prime2), TB)
 			E = clip(Tools.remount(P4Prime3, (h, w)), 0, 255)
 			P4Prime2 = P4Prime2.reshape(h, w)
 			BUFFER[permutations[2]]['PSNR'].append(WSPSNR(image, E))
@@ -283,7 +283,7 @@ for file in files:
 results_4K = sorted(results_4K, key=itemgetter('File name'))
 destination = os.getcwd() + '/aplications/main/results/'
 fieldnames = ['File name', 'Method', 'PSNR', 'SSIM', 'BPP']
-with open(destination + 'permutations_oliveira_4K.csv', 'w') as csv_file_4k:
+with open(destination + 'permutations_brahimi_4K.csv', 'w') as csv_file_4k:
 	writer_4k = csv.DictWriter(csv_file_4k, fieldnames)
 	writer_4k.writeheader()
 	for result in results_4K:

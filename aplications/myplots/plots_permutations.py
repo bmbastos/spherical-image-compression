@@ -61,7 +61,7 @@ def averages(data_set: list, methods: list) -> dict:
 
 # __MAIN__#
 print("Current path:", os.getcwd())
-target_file ="permutations_oliveira_4K.csv"
+target_file ="permutations_raiza_4K.csv"
 path = "aplications/main/results/" + target_file
 destination = "aplications/myplots/results/"
 dataset, methods = pre_processing(path)
@@ -89,7 +89,7 @@ plt.ylabel('WS-PSNR (dB)')
 plt.xlim(0, 5)
 plt.ylim(min_psnr, max_psnr+3)
 plt.legend(frameon=False, ncols=1, loc='upper left')
-plt.savefig(destination + 'permutations_oliveira_4K_WS-PSNR_' + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
+plt.savefig(destination + target_file.split(".")[0] + '_WS-PSNR_' + '.pdf', bbox_inches='tight', pad_inches=0)
 #plt.show()
 plt.clf()
 plt.cla()
@@ -111,7 +111,7 @@ plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(0.1))
 plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1f'))
 #plt.legend(frameon=False, ncols=1, bbox_to_anchor=(0.45, 0.4))
 plt.legend(frameon=False, ncols=1, loc='lower right')
-plt.savefig(destination + 'permutations_oliveira_4K_WS-SSIM_'  + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
+plt.savefig(destination + target_file.split(".")[0] + '_WS-SSIM' + '.pdf', bbox_inches='tight', pad_inches=0)
 #plt.show()
 
 
