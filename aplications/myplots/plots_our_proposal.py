@@ -4,34 +4,32 @@ import random
 import csv
 from numpy import array, zeros, ceil
 import matplotlib.pyplot as plt
-from matplotlib import colors
+import matplotlib.ticker as ticker
 
 def pre_processing(csv_file_name: str) -> tuple:
-	data_set = []
-	methods = []
-	with open(csv_file_name, 'r') as file:
-		reader = csv.DictReader(file)
-		for row in reader:
-			file_name, method, psnr, ssim, bpp = row.values()
-			methods.append(method)
-			data_set.append({
-				'Filename': file_name,
-				'Method': method,
-				'PSNR': list(map(float, psnr.strip('[]').split(','))),
-				'SSIM': list(map(float, ssim.strip('[]').split(','))),
-				'BPP': list(map(float, bpp.strip('[]').split(',')))
-			})
-	methods = list(set(methods))
-	return data_set, methods
+    data_set = []
+    methods = []
+    with open(csv_file_name, 'r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            file_name, method, psnr, ssim, bpp = row.values()
+            methods.append(method)
 
-def random_unique_colors(num_colors):
-	colors_css4 = list(colors.CSS4_COLORS.values())
-	dark_colors = [color for color in colors_css4 if colors.to_rgb(color)[2] < 0.5]
-	unique_colors = set()
-	while len(unique_colors) < num_colors:
-		random_color = random.choice(dark_colors)
-		unique_colors.add(random_color)
-	return list(unique_colors)
+            # Helper function to clean and convert values
+            def clean_and_convert(value_str):
+                return list(map(float, value_str.replace('np.float64(', '').replace(')', '').strip('[]').split(',')))
+
+            data_set.append({
+                'Filename': file_name,
+                'Method': method,
+                'PSNR': clean_and_convert(psnr),
+                'SSIM': clean_and_convert(ssim),
+                'BPP': clean_and_convert(bpp)
+            })
+    
+    methods = list(set(methods))
+    return data_set, methods
+
 
 def averages(data_set: list, methods: list) -> dict:
 	n_images = len(data_set) // len(methods)
@@ -74,7 +72,7 @@ def averages(data_set: list, methods: list) -> dict:
 
 # __MAIN__#
 print("Current path:", os.getcwd())
-target_file ="our_proposal.csv"
+target_file ="our_proposal_4K.csv"
 path = "aplications/main/results/" + target_file
 destination = "aplications/myplots/results/"
 dataset, methods = pre_processing(path)
@@ -99,10 +97,10 @@ for avg in avgs:
 			ls=avgs[avg]['Style'], label=avg, linewidth=1)
 plt.xlabel('Bitrate (bpp)')
 plt.ylabel('WS-PSNR (dB)')
-plt.xlim(0, 2.5)
-plt.ylim(min_psnr, max_psnr+5)
+plt.xlim(0, 2.75)
+plt.ylim(min_psnr, max_psnr+3)
 plt.legend(frameon=False, ncols=1, loc='upper left')
-plt.savefig(destination + '2bastos_WS-PSNR_' + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
+plt.savefig(destination + 'bastos_WS-PSNR_' + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
 #plt.show()
 plt.clf()
 plt.cla()
@@ -118,11 +116,13 @@ for avg in avgs:
 			ls=avgs[avg]['Style'], label=avg, linewidth=1)
 plt.xlabel('Bitrate (bpp)')
 plt.ylabel('WS-SSIM')
-plt.xlim(0, 2.5)
+plt.xlim(0, 2.75)
 plt.ylim(min_ssim-0.05, 1+0.03)
+plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(0.1))
+plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1f'))
 #plt.legend(frameon=False, ncols=1, bbox_to_anchor=(0.45, 0.4))
 plt.legend(frameon=False, ncols=1, loc='lower right')
-plt.savefig(destination + '2bastos_WS-SSIM_'  + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
+plt.savefig(destination + 'bastos_WS-SSIM_'  + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
 #plt.show()
 
 

@@ -1,20 +1,4 @@
-import sys
 import os
-# Jeito feio
-#sys.path.append(os.path.join(os.path.dirname(__file__), '../mylibs'))
-#from matrixes import *
-#from tools import Tools
-from ..mylibs.matrixes import *
-from ..mylibs.tools import Tools
-print(sys.path)
-from pdb import set_trace as pause
-pause()
-from ..mylibs.tools import *
-from ..mylibs.matrixes import *
-#import sys
-#print(sys.path)
-#import mylibs.tools
-
 import csv
 from numpy import *
 from time import time
@@ -22,9 +6,12 @@ from skimage.io import imread
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from skimage.transform import resize as resize2
 from scipy import signal
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plot
+from pdb import set_trace as pause
 from tqdm import tqdm
 from operator import itemgetter
+from ..mylibs.matrixes import *
+from ..mylibs.tools import Tools
 
 # DEFINIÇÃO DE FUNÇÕES
 
@@ -205,7 +192,8 @@ def WSPSNR(img1, img2, max = 255.): # img1 e img2 devem ter shape hx2h e ser em 
 
 # MAIN --------------------------------------------------------------------------------------------------
 # Pré processamento
-path_images = "../ImagesForTest/Spherical"
+path_images = os.getcwd() + "/images_for_tests/spherical/by_resolution/"
+directories = [d for d in os.listdir(path_images) if os.path.isdir(os.path.join(path_images, d))]
 T = calculate_matrix_of_transformation(8)
 SO, so = compute_scale_matrix(TO)
 SB, sb = compute_scale_matrix(TB)
@@ -218,112 +206,146 @@ quantization_factor = range(5, 100, 5)
 results = []
 target = 1
 processed_images = 0
-files = os.listdir(path_images)
-for file in tqdm(files):
-	full_path = os.path.join(path_images, file)
-	if os.path.isfile(full_path) == False: continue
-
-	image = imread(full_path, as_gray=True).astype(float)
-	#image = resize2(image, (128, 256), anti_aliasing=True)
-	#plt.imshow(image, cmap='gray'); plt.show()
-
-	if image.max() <= 1:
-		image = around(255*image)
-	h, w = image.shape
-	A = Tools.umount(image, (8, 8))# - 128
-	print(file, h, w)
-
-	ZT_tiled = tile(asarray([T]), (A.shape[0], 1, 1))
-	ZO_tiled = tile(asarray([ZO]), (A.shape[0], 1, 1))
-	ZB_tiled = tile(asarray([ZB]), (A.shape[0], 1, 1))
-	ZR_tiled = tile(asarray([ZR]), (A.shape[0], 1, 1))
-
-	BUFFER = {'JPEG': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-				'OLIVEIRA': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-				'BRAHIMI': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-				'RAIZA': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-				'DE_SIMONE': {'PSNR':[], 'SSIM':[], 'BPP':[]}}
-
-
-	for QF in quantization_factor:
-		QOliveira = adjust_quantization(QF, Q0)
-		
-		# JPEG
-		JpegPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T)
-		JpegPrime2 = multiply(around(divide(JpegPrime1, QOliveira)), QOliveira)
-		JpegPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, JpegPrime2), T)
-		B = clip(Tools.remount(JpegPrime3, (h, w)), 0, 255)
-		JpegPrime2 = JpegPrime2.reshape(h, w)
-		BUFFER['JPEG']['PSNR'].append(WSPSNR(image, B))
-		BUFFER['JPEG']['SSIM'].append(WSSSIM(image, B))
-		BUFFER['JPEG']['BPP'].append(bpp(JpegPrime2))
-		del JpegPrime1; del JpegPrime2; del JpegPrime3; del B
-
-		# DE SIMONE
-		QPhiOliveira = prepareQPhi(image, QOliveira)
-		PhiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T)
-		PhiPrime2 = multiply(around(divide(PhiPrime1, QPhiOliveira)), QPhiOliveira)
-		PhiPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, PhiPrime2), T)
-		C = clip(Tools.remount(PhiPrime3, (h, w)), 0, 255)
-		PhiPrime2 = PhiPrime2.reshape(h, w)
-		BUFFER['DE_SIMONE']['PSNR'].append(WSPSNR(image, C))
-		BUFFER['DE_SIMONE']['SSIM'].append(WSSSIM(image, C))
-		BUFFER['DE_SIMONE']['BPP'].append(bpp(PhiPrime2))
-		del PhiPrime1; del PhiPrime2; del PhiPrime3; del C; del QPhiOliveira
+for directory in directories:
+	partial_path = path_images + directory + '/'
+	print('Analysing directory:', directory)
+	files = os.listdir(partial_path)
 	
+	full_path = ''
+	for file in files:
+		if not os.path.isdir(partial_path + file) and file.endswith(".bmp"):
+			#if processed_images == target:
+				#break
+			full_path = os.path.join(partial_path, file)
+			image = imread(full_path, as_gray=True).astype(float)
+			#image = resize2(image, (128, 256), anti_aliasing=True)
+			
 
-		# OLIVEIRA
-		OliveiraPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO, A), TO.T)
-		QOliveiraForward = prepareQPhi(image, np2_round(divide(QOliveira, ZO)))
-		QOliveiraBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZO)))
-		OliveiraPrime2 = multiply(around(divide(OliveiraPrime1, QOliveiraForward)), QOliveiraBackward)
-		OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
-		D = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
-		OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
-		BUFFER['OLIVEIRA']['PSNR'].append(WSPSNR(image, D))
-		BUFFER['OLIVEIRA']['SSIM'].append(WSSSIM(image, D))
-		BUFFER['OLIVEIRA']['BPP'].append(bpp(OliveiraPrime2))
-		del OliveiraPrime1; del OliveiraPrime2; del OliveiraPrime3; del D; del QOliveiraForward; del QOliveiraBackward
+			if image.max() <= 1:
+				image = around(255*image)
+			h, w = image.shape
+			A = Tools.umount(image, (8, 8))# - 128
+			print(f"{file} - {h}x{w} - {processed_images+1}/{len(files)}")
 
-		# RAIZA
-		RaizaPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
-		QRaizaForward = prepareQPhi(image, np2_round(divide(QOliveira, ZR)))
-		QRaizaBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZR)))
-		RaizaPrime2 = multiply(around(divide(RaizaPrime1, QRaizaForward)), QRaizaBackward)
-		RaizaPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaPrime2), TR)
-		E = clip(Tools.remount(RaizaPrime3, (h, w)), 0, 255)
-		RaizaPrime2 = RaizaPrime2.reshape(h, w)
-		BUFFER['RAIZA']['PSNR'].append(WSPSNR(image, E))
-		BUFFER['RAIZA']['SSIM'].append(WSSSIM(image, E))
-		BUFFER['RAIZA']['BPP'].append(bpp(RaizaPrime2))
-		del RaizaPrime1; del RaizaPrime2; del RaizaPrime3; del E; del QRaizaForward; del QRaizaBackward
+			ZT_tiled = tile(asarray([T]), (A.shape[0], 1, 1))
+			ZO_tiled = tile(asarray([ZO]), (A.shape[0], 1, 1))
+			ZB_tiled = tile(asarray([ZB]), (A.shape[0], 1, 1))
+			ZR_tiled = tile(asarray([ZR]), (A.shape[0], 1, 1))
 
-		# BRAHIMI
-		BrahimiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB, A), TB.T)
-		QBrahimiForward = prepareQPhi(image, np2_round(divide(QOliveira, ZB)))
-		QBrahimiBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZB)))
-		BrahimiPrime2 = multiply(around(divide(BrahimiPrime1, QBrahimiForward)), QBrahimiBackward)
-		BrahimiPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, BrahimiPrime2), TB)
-		F = clip(Tools.remount(BrahimiPrime3, (h, w)), 0, 255)
-		BrahimiPrime2 = BrahimiPrime2.reshape(h, w)
-		BUFFER['BRAHIMI']['PSNR'].append(WSPSNR(image, F))
-		BUFFER['BRAHIMI']['SSIM'].append(WSSSIM(image, F))
-		BUFFER['BRAHIMI']['BPP'].append(bpp(BrahimiPrime2))
-		del BrahimiPrime1; del BrahimiPrime2; del BrahimiPrime3; del F; del QBrahimiForward; del QBrahimiBackward; del QOliveira
+			BUFFER = {'JPEG': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+						'OLIVEIRA': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+						'BRAHIMI': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+						'RAIZA': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+						'DE_SIMONE': {'PSNR':[], 'SSIM':[], 'BPP':[]}}
 
-	
-	processed_images += 1
-	results.append({'File name':file, 'Method':"JPEG", 'PSNR':BUFFER['JPEG']['PSNR'], 'SSIM':BUFFER['JPEG']['SSIM'], 'BPP':BUFFER['JPEG']['BPP']})
-	results.append({'File name':file, 'Method':"OLIVEIRA", 'PSNR':BUFFER['OLIVEIRA']['PSNR'], 'SSIM':BUFFER['OLIVEIRA']['SSIM'], 'BPP':BUFFER['OLIVEIRA']['BPP']})
-	results.append({'File name':file, 'Method':"BRAHIMI", 'PSNR':BUFFER['BRAHIMI']['PSNR'], 'SSIM':BUFFER['BRAHIMI']['SSIM'], 'BPP':BUFFER['BRAHIMI']['BPP']})
-	results.append({'File name':file, 'Method':"RAIZA", 'PSNR':BUFFER['RAIZA']['PSNR'], 'SSIM':BUFFER['RAIZA']['SSIM'], 'BPP':BUFFER['RAIZA']['BPP']})
-	results.append({'File name':file, 'Method':"DE_SIMONE", 'PSNR':BUFFER['DE_SIMONE']['PSNR'], 'SSIM':BUFFER['DE_SIMONE']['SSIM'], 'BPP':BUFFER['DE_SIMONE']['BPP']})
-	
+
+			for QF in quantization_factor:
+				QOliveira = adjust_quantization(QF, Q0)
+				
+				# JPEG
+				JpegPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T)
+				JpegPrime2 = multiply(around(divide(JpegPrime1, QOliveira)), QOliveira)
+				JpegPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, JpegPrime2), T)
+				B = clip(Tools.remount(JpegPrime3, (h, w)), 0, 255)
+				JpegPrime2 = JpegPrime2.reshape(h, w)
+				BUFFER['JPEG']['PSNR'].append(WSPSNR(image, B))
+				BUFFER['JPEG']['SSIM'].append(WSSSIM(image, B))
+				BUFFER['JPEG']['BPP'].append(bpp(JpegPrime2))
+				del JpegPrime1; del JpegPrime2; del JpegPrime3; del B
+
+				# DE SIMONE
+				QPhiOliveira = prepareQPhi(image, QOliveira)
+				PhiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T)
+				PhiPrime2 = multiply(around(divide(PhiPrime1, QPhiOliveira)), QPhiOliveira)
+				PhiPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, PhiPrime2), T)
+				C = clip(Tools.remount(PhiPrime3, (h, w)), 0, 255)
+				PhiPrime2 = PhiPrime2.reshape(h, w)
+				BUFFER['DE_SIMONE']['PSNR'].append(WSPSNR(image, C))
+				BUFFER['DE_SIMONE']['SSIM'].append(WSSSIM(image, C))
+				BUFFER['DE_SIMONE']['BPP'].append(bpp(PhiPrime2))
+				del PhiPrime1; del PhiPrime2; del PhiPrime3; del C; del QPhiOliveira
+			
+
+				# OLIVEIRA
+				OliveiraPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO, A), TO.T)
+				QOliveiraForward = prepareQPhi(image, np2_round(divide(QOliveira, ZO)))
+				QOliveiraBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZO)))
+				OliveiraPrime2 = multiply(around(divide(OliveiraPrime1, QOliveiraForward)), QOliveiraBackward)
+				OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
+				D = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
+				OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
+				BUFFER['OLIVEIRA']['PSNR'].append(WSPSNR(image, D))
+				BUFFER['OLIVEIRA']['SSIM'].append(WSSSIM(image, D))
+				BUFFER['OLIVEIRA']['BPP'].append(bpp(OliveiraPrime2))
+				del OliveiraPrime1; del OliveiraPrime2; del OliveiraPrime3; del D; del QOliveiraForward; del QOliveiraBackward
+
+				# RAIZA
+				RaizaPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
+				QRaizaForward = prepareQPhi(image, np2_round(divide(QOliveira, ZR)))
+				QRaizaBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZR)))
+				RaizaPrime2 = multiply(around(divide(RaizaPrime1, QRaizaForward)), QRaizaBackward)
+				RaizaPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaPrime2), TR)
+				E = clip(Tools.remount(RaizaPrime3, (h, w)), 0, 255)
+				RaizaPrime2 = RaizaPrime2.reshape(h, w)
+				BUFFER['RAIZA']['PSNR'].append(WSPSNR(image, E))
+				BUFFER['RAIZA']['SSIM'].append(WSSSIM(image, E))
+				BUFFER['RAIZA']['BPP'].append(bpp(RaizaPrime2))
+				del RaizaPrime1; del RaizaPrime2; del RaizaPrime3; del E; del QRaizaForward; del QRaizaBackward
+
+				# BRAHIMI
+				BrahimiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB, A), TB.T)
+				QBrahimiForward = prepareQPhi(image, np2_round(divide(QOliveira, ZB)))
+				QBrahimiBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZB)))
+				BrahimiPrime2 = multiply(around(divide(BrahimiPrime1, QBrahimiForward)), QBrahimiBackward)
+				BrahimiPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, BrahimiPrime2), TB)
+				F = clip(Tools.remount(BrahimiPrime3, (h, w)), 0, 255)
+				BrahimiPrime2 = BrahimiPrime2.reshape(h, w)
+				BUFFER['BRAHIMI']['PSNR'].append(WSPSNR(image, F))
+				BUFFER['BRAHIMI']['SSIM'].append(WSSSIM(image, F))
+				BUFFER['BRAHIMI']['BPP'].append(bpp(BrahimiPrime2))
+				del BrahimiPrime1; del BrahimiPrime2; del BrahimiPrime3; del F; del QBrahimiForward; del QBrahimiBackward; del QOliveira
+
+			
+			processed_images += 1
+			results.append({'File name':file, 'Method':"JPEG", 'PSNR':BUFFER['JPEG']['PSNR'], 'SSIM':BUFFER['JPEG']['SSIM'], 'BPP':BUFFER['JPEG']['BPP']})
+			results.append({'File name':file, 'Method':"OLIVEIRA", 'PSNR':BUFFER['OLIVEIRA']['PSNR'], 'SSIM':BUFFER['OLIVEIRA']['SSIM'], 'BPP':BUFFER['OLIVEIRA']['BPP']})
+			results.append({'File name':file, 'Method':"BRAHIMI", 'PSNR':BUFFER['BRAHIMI']['PSNR'], 'SSIM':BUFFER['BRAHIMI']['SSIM'], 'BPP':BUFFER['BRAHIMI']['BPP']})
+			results.append({'File name':file, 'Method':"RAIZA", 'PSNR':BUFFER['RAIZA']['PSNR'], 'SSIM':BUFFER['RAIZA']['SSIM'], 'BPP':BUFFER['RAIZA']['BPP']})
+			results.append({'File name':file, 'Method':"DE_SIMONE", 'PSNR':BUFFER['DE_SIMONE']['PSNR'], 'SSIM':BUFFER['DE_SIMONE']['SSIM'], 'BPP':BUFFER['DE_SIMONE']['BPP']})
+	processed_images = 0
 
 results = sorted(results, key=itemgetter('File name'))
+resolution_4K = []
+resolution_6K = []
+resolution_8K = []
+for result in results:
+	if '3840x1920' in result['File name']:
+		resolution_4K.append(result)
+	elif '6144x3072' in result['File name']:
+		resolution_6K.append(result)
+	elif '8192x4096' in result['File name']:
+		resolution_8K.append(result)
+
+destination = os.getcwd() + '/aplications/main/results/'
 fieldnames = ['File name', 'Method', 'PSNR', 'SSIM', 'BPP']
-with open('our_proposal.csv', 'w') as csv_file:
-	writer = csv.DictWriter(csv_file, fieldnames)
-	writer.writeheader()
-	for result in results:
-		writer.writerow(result)
+with open(destination + 'our_proposal_4K.csv', 'w') as csv_file_4k:
+	writer_4k = csv.DictWriter(csv_file_4k, fieldnames)
+	writer_4k.writeheader()
+	for result in resolution_4K:
+		writer_4k.writerow(result)
+
+with open(destination + 'our_proposal_6K.csv', 'w') as csv_file_6k:
+	writer_6k = csv.DictWriter(csv_file_6k, fieldnames)
+	writer_6k.writeheader()
+	for result in resolution_6K:
+		writer_6k.writerow(result)
+
+with open(destination + 'our_proposal_8K.csv', 'w') as csv_file_8k:
+	writer_8k = csv.DictWriter(csv_file_8k, fieldnames)
+	writer_8k.writeheader()
+	for result in resolution_8K:
+		writer_8k.writerow(result)
+
+print('Processamento finalizado')
+
+

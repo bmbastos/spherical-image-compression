@@ -322,7 +322,6 @@ resolution_4K = []
 resolution_6K = []
 resolution_8K = []
 for result in results:
-	pause()
 	if '3840x1920' in result['File name']:
 		resolution_4K.append(result)
 	elif '6144x3072' in result['File name']:
@@ -330,20 +329,21 @@ for result in results:
 	elif '8192x4096' in result['File name']:
 		resolution_8K.append(result)
 
+destination = os.getcwd() + '/aplications/main/results/'
 fieldnames = ['File name', 'Method', 'PSNR', 'SSIM', 'BPP']
-with open('original_proposes_4K.csv', 'w') as csv_file_4k:
+with open(destination + 'original_proposes_4K.csv', 'w') as csv_file_4k:
 	writer_4k = csv.DictWriter(csv_file_4k, fieldnames)
 	writer_4k.writeheader()
 	for result in resolution_4K:
 		writer_4k.writerow(result)
 
-with open('original_proposes_6K.csv', 'w') as csv_file_6k:
+with open(destination + 'original_proposes_6K.csv', 'w') as csv_file_6k:
 	writer_6k = csv.DictWriter(csv_file_6k, fieldnames)
 	writer_6k.writeheader()
 	for result in resolution_6K:
 		writer_6k.writerow(result)
 
-with open('original_proposes_8K.csv', 'w') as csv_file_8k:
+with open(destination + 'original_proposes_8K.csv', 'w') as csv_file_8k:
 	writer_8k = csv.DictWriter(csv_file_8k, fieldnames)
 	writer_8k.writeheader()
 	for result in resolution_8K:

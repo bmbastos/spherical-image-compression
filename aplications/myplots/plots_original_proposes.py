@@ -4,34 +4,32 @@ import random
 import csv
 from numpy import array, zeros, ceil
 import matplotlib.pyplot as plt
-from matplotlib import colors
+import matplotlib.ticker as ticker
 
 def pre_processing(csv_file_name: str) -> tuple:
-	data_set = []
-	methods = []
-	with open(csv_file_name, 'r') as file:
-		reader = csv.DictReader(file)
-		for row in reader:
-			file_name, method, psnr, ssim, bpp = row.values()
-			methods.append(method)
-			data_set.append({
-				'Filename': file_name,
-				'Method': method,
-				'PSNR': list(map(float, psnr.strip('[]').split(','))),
-				'SSIM': list(map(float, ssim.strip('[]').split(','))),
-				'BPP': list(map(float, bpp.strip('[]').split(',')))
-			})
-	methods = list(set(methods))
-	return data_set, methods
+    data_set = []
+    methods = []
+    with open(csv_file_name, 'r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            file_name, method, psnr, ssim, bpp = row.values()
+            methods.append(method)
 
-def random_unique_colors(num_colors):
-	colors_css4 = list(colors.CSS4_COLORS.values())
-	dark_colors = [color for color in colors_css4 if colors.to_rgb(color)[2] < 0.5]
-	unique_colors = set()
-	while len(unique_colors) < num_colors:
-		random_color = random.choice(dark_colors)
-		unique_colors.add(random_color)
-	return list(unique_colors)
+            # Helper function to clean and convert values
+            def clean_and_convert(value_str):
+                return list(map(float, value_str.replace('np.float64(', '').replace(')', '').strip('[]').split(',')))
+
+            data_set.append({
+                'Filename': file_name,
+                'Method': method,
+                'PSNR': clean_and_convert(psnr),
+                'SSIM': clean_and_convert(ssim),
+                'BPP': clean_and_convert(bpp)
+            })
+    
+    methods = list(set(methods))
+    return data_set, methods
+
 
 def averages(data_set: list, methods: list) -> dict:
 	n_images = len(data_set) // len(methods)
@@ -74,21 +72,25 @@ def averages(data_set: list, methods: list) -> dict:
 	return avgs
 
 # __MAIN__#
-target_file = "original_proposes.csv"
-dataset, methods = pre_processing(target_file)
+print("Current path:", os.getcwd())
+target_file ="original_proposes_8K.csv"
+path = "aplications/main/results/" + target_file
+print(f"PATH: {path}")
+destination = "aplications/myplots/results/"
+dataset, methods = pre_processing(path)
 methods.sort()
 methods.insert(0, methods.pop(methods.index("JPEG")))
 avgs = averages(dataset, methods)
 
 max_psnr = round(max(max(avgs[avg]['PSNR']) for avg in avgs)) + 5
-max_bpp = ceil(max(max(avgs[avg]['BPP']) for avg in avgs))
+#max_bpp = ceil(max(max(avgs[avg]['BPP']) for avg in avgs))
 min_psnr = round(min(min(avgs[avg]['PSNR']) for avg in avgs)) - 3
 min_ssim = min(min(avgs[avg]['SSIM']) for avg in avgs) - 0.03
 
 plt.rcParams['font.family'] = 'Times New Roman'
-plt.rcParams['font.size'] = 7
+plt.rcParams['font.size'] = 8
 plt.rcParams['text.usetex'] = True
-plt.rcParams["figure.figsize"] = (3.4, 2.55)
+plt.rcParams["figure.figsize"] = (3, 2)
 
 # Plot WS-PSNR
 for avg in avgs:
@@ -97,14 +99,19 @@ for avg in avgs:
 			ls=avgs[avg]['Style'], label=avg, linewidth=1)
 plt.xlabel('Bitrate (bpp)')
 plt.ylabel('WS-PSNR (dB)')
-plt.xlim(0, 2.5)
-plt.ylim(min_psnr, max_psnr)
-plt.legend(frameon=False, bbox_to_anchor=(0.49, 0.5))
-plt.savefig('bastos_WS-PSNR_' + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
+plt.xlim(0, 2.25)
+plt.ylim(min_psnr, max_psnr+35)
+plt.legend(frameon=False, ncols=1, loc='upper left')
+plt.savefig(destination + 'bastos_WS-PSNR_' + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
 #plt.show()
 plt.clf()
 plt.cla()
 
+
+plt.rcParams['font.family'] = 'Times New Roman'
+plt.rcParams['font.size'] = 8
+plt.rcParams['text.usetex'] = True
+plt.rcParams["figure.figsize"] = (3, 2)
 # Plot WS-SSIM
 for avg in avgs:
 	if avg.startswith('Raiza'): continue;
@@ -112,10 +119,13 @@ for avg in avgs:
 			ls=avgs[avg]['Style'], label=avg, linewidth=1)
 plt.xlabel('Bitrate (bpp)')
 plt.ylabel('WS-SSIM')
-plt.xlim(0, 2.5)
-plt.ylim(min_ssim, 1)
-plt.legend(frameon=False, bbox_to_anchor=(0.49, 0.7))
-plt.savefig('bastos_WS-SSIM_'  + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
+plt.xlim(0, 2.25)
+plt.ylim(min_ssim-0.3, 1+0.03)
+plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(0.1))
+plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1f'))
+#plt.legend(frameon=False, ncols=1, bbox_to_anchor=(0.45, 0.4))
+plt.legend(frameon=False, ncols=1, loc='lower right')
+plt.savefig(destination + 'bastos_WS-SSIM_'  + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
 #plt.show()
 
 
