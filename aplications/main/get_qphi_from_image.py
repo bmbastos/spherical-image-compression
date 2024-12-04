@@ -1,8 +1,8 @@
 from numpy import *
 from skimage.io import imread
 from pdb import set_trace as pause
-from matrixes import *
-from tools import *
+from ..mylibs.matrixes import *
+from ..mylibs.tools import Tools
 import os
 
 def adjust_quantization(quality_factor:int, quantization_matrix:ndarray) -> ndarray:
@@ -14,6 +14,12 @@ def adjust_quantization(quality_factor:int, quantization_matrix:ndarray) -> ndar
 	resulting_matrix = floor((s * quantization_matrix + 50) / 100)
 	return resulting_matrix
 """ Calcula a matriz de quantização dado um fator de quantização """
+
+def compute_scale_matrix(transformation_matrix:ndarray) -> matrix:
+	scale_matrix = matrix(sqrt(linalg.inv(dot(transformation_matrix, transformation_matrix.T))))
+	scale_vector = matrix(diag(scale_matrix))
+	return scale_matrix, scale_vector
+""" Matrix diagonal e elementos da matriz diagonal vetorizados """
 
 def np2_round(quantization_matrix:matrix) -> matrix:
 	return power(2, around(log2(quantization_matrix)))
@@ -76,14 +82,22 @@ def QtildeAtEl(k_lut:ndarray, min_lut:ndarray, max_lut:ndarray, el:float32, quan
 		return Q
 
 
-def prepareQPhi(image:ndarray, quantization_matrix:ndarray, N = 8):
+def prepareQPhi(image:ndarray, quantization_matrix:ndarray, adjustment_coefficients:ndarray, N = 8):
 	h, w = image.shape
 	k_lut, min_lut, max_lut = build_LUT(h)
 	print(f"Altura: {h}, Largura: {w}")
-	pause()
-	elevation_alvo = pi/4
-	q_alvo = np2_round(QtildeAtEl(k_lut, min_lut, max_lut, elevation_alvo, quantization_matrix))
-	print(q_alvo)
+	print('Abaixo digite a elevação alvo para obter as matrizes de quantização Q_forward e Q_backward com valores maiores que -pi/2 e menores que pi/2')
+	elevation_alvo = float(input('Digite a elevação alvo: '))
+	if elevation_alvo < -pi/2 or elevation_alvo > pi/2:
+		print('Elevação alvo fora do intervalo [-pi/2, pi/2]')
+		return
+	q_alvo_f = np2_round(divide(QtildeAtEl(k_lut, min_lut, max_lut, elevation_alvo, quantization_matrix), adjustment_coefficients))
+	q_alvo_b = np2_round(multiply(QtildeAtEl(k_lut, min_lut, max_lut, elevation_alvo, quantization_matrix), adjustment_coefficients))
+	print('Q_forward:')
+	print(q_alvo_f)
+	print()
+	print('Q_backward:')
+	print(q_alvo_b)
 	els = linspace(-pi/2, pi/2, h//N+1)
 	els = 0.5*(els[1:] + els[:-1]) # gets the "central" block elevation
 	QPhi = []
@@ -96,17 +110,21 @@ def prepareQPhi(image:ndarray, quantization_matrix:ndarray, N = 8):
 
 
 ##__MAIN__##
-path_images = "../ImagesForTest/Spherical/"
+path_images = os.getcwd() + "/images_for_tests/spherical/by_resolution/8K/"
 file_init = "Harbor"
 files = os.listdir(path_images)
 for file in files:
 	if not file.startswith(file_init): continue
 	full_path = path_images + file
 	image = imread(full_path, as_gray=True).astype(float)
+	if image.max() <= 1:
+				image = around(255*image)
 	print(f"Nome de arquivo: {file}")
 	h, w = image.shape
-	quality_factor = 25
+	quality_factor = 75
+	SO, so = compute_scale_matrix(TO)
+	ZO = dot(so.T, so)
 	Q = adjust_quantization(quality_factor, Q0)
-	QPhi = prepareQPhi(image, Q)
+	QPhi = prepareQPhi(image, Q, ZO)
 
 

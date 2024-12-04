@@ -45,21 +45,13 @@ def averages(data_set: list, methods: list) -> dict:
 				avg_ssim += array(data['SSIM'])
 				avg_bpp += array(data['BPP'])
 
-		if method.startswith('JPEG'):
-			color, style = 'black', 'solid'
-			method = r'JPEG'
-		elif method.startswith('OLIVEIRA'):
-			color, style = 'red', 'dotted'
-			method = r'Oliveira et al. (2017)'
-		elif method.startswith('BRAHIMI'):
-			color, style = 'green', 'dotted'
-			method = r'Brahimi et al. (2021)'
-		elif method.startswith('RAIZA'):
-			color, style = 'magenta', 'dotted'
-			method = r'Raiza et al. (2018)'
-		elif method.startswith('DE_SIMONE'):
-			color, style = 'blue', 'dotted'
-			method = r'De Simone et al. (2016)'
+		if r'\circ' in method:
+			color = 'green'
+			style = 'dashed'
+		elif r'\uparrow' in method:
+			color = 'purple'
+			style = 'dashed'
+			
 
 
 		avgs[method] = {
@@ -73,13 +65,12 @@ def averages(data_set: list, methods: list) -> dict:
 
 # __MAIN__#
 print("Current path:", os.getcwd())
-target_file ="original_proposes_8K.csv"
+target_file ="brahimi_4K.csv"
 path = "aplications/main/results/" + target_file
 print(f"PATH: {path}")
 destination = "aplications/myplots/results/"
 dataset, methods = pre_processing(path)
 methods.sort()
-methods.insert(0, methods.pop(methods.index("JPEG")))
 avgs = averages(dataset, methods)
 
 margin_int = 5
@@ -89,6 +80,7 @@ max_bpp = max(max(avgs[avg]['BPP']) for avg in avgs) + margin_float
 min_psnr = round(min(min(avgs[avg]['PSNR']) for avg in avgs)) - margin_int
 min_ssim = min(min(avgs[avg]['SSIM']) for avg in avgs) - 0.03
 
+plt.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
 plt.rcParams['font.family'] = 'Times New Roman'
 plt.rcParams['font.size'] = 8
 plt.rcParams['text.usetex'] = True
@@ -102,8 +94,8 @@ for avg in avgs:
 plt.xlabel('Bitrate (bpp)')
 plt.ylabel('WS-PSNR (dB)')
 plt.xlim(0, max_bpp)
-plt.ylim(min_psnr, max_psnr+35)
-plt.legend(frameon=False, ncols=1, loc='upper left')
+plt.ylim(min_psnr, max_psnr+5)
+plt.legend(frameon=False, ncols=1, loc='upper right')
 plt.savefig(destination + 'bastos_WS-PSNR_' + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
 #plt.show()
 plt.clf()
@@ -122,11 +114,11 @@ for avg in avgs:
 plt.xlabel('Bitrate (bpp)')
 plt.ylabel('WS-SSIM')
 plt.xlim(0, max_bpp)
-plt.ylim(min_ssim-0.3, 1+0.03)
+plt.ylim(min_ssim, 1+0.03)
 plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(0.1))
 plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1f'))
 #plt.legend(frameon=False, ncols=1, bbox_to_anchor=(0.45, 0.4))
-plt.legend(frameon=False, ncols=1, loc='lower right')
+plt.legend(frameon=False, ncols=1, loc='upper right')
 plt.savefig(destination + 'bastos_WS-SSIM_'  + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
 #plt.show()
 

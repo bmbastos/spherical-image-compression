@@ -2,7 +2,7 @@ import os
 import sys
 import random
 import csv
-from numpy import array, zeros, ceil
+from numpy import array, zeros, ceil, floor
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
@@ -68,10 +68,11 @@ dataset, methods = pre_processing(path)
 methods.sort()
 avgs = averages(dataset, methods)
 
-max_psnr = round(max(max(avgs[avg]['PSNR']) for avg in avgs)) + 5
-#max_bpp = ceil(max(max(avgs[avg]['BPP']) for avg in avgs))
-min_psnr = round(min(min(avgs[avg]['PSNR']) for avg in avgs)) - 3
-min_ssim = min(min(avgs[avg]['SSIM']) for avg in avgs) - 0.03
+max_psnr = ceil(max(max(avgs[avg]['PSNR']) for avg in avgs))
+max_bpp = ceil(max(max(avgs[avg]['BPP']) for avg in avgs))
+min_psnr = floor(min(min(avgs[avg]['PSNR']) for avg in avgs))
+min_ssim = min(min(avgs[avg]['SSIM']) for avg in avgs)
+
 
 plt.rcParams['font.family'] = 'Times New Roman'
 plt.rcParams['font.size'] = 8
@@ -86,9 +87,9 @@ for avg in avgs:
 			ls=avgs[avg]['Style'], label=avg, linewidth=1)
 plt.xlabel('Bitrate (bpp)')
 plt.ylabel('WS-PSNR (dB)')
-plt.xlim(0, 5)
-plt.ylim(min_psnr, max_psnr+3)
-plt.legend(frameon=False, ncols=1, loc='upper left')
+plt.xlim(0, 3)
+plt.ylim(min_psnr, max_psnr)
+plt.legend(frameon=False, ncols=1)
 plt.savefig(destination + target_file.split(".")[0] + '_WS-PSNR_' + '.pdf', bbox_inches='tight', pad_inches=0)
 #plt.show()
 plt.clf()
@@ -105,12 +106,12 @@ for avg in avgs:
 			ls=avgs[avg]['Style'], label=avg, linewidth=1)
 plt.xlabel('Bitrate (bpp)')
 plt.ylabel('WS-SSIM')
-plt.xlim(0, 5)
-plt.ylim(min_ssim-0.05, 1+0.03)
+plt.xlim(0, 3)
+plt.ylim(min_ssim-0.05, 1.0)
 plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(0.1))
 plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1f'))
 #plt.legend(frameon=False, ncols=1, bbox_to_anchor=(0.45, 0.4))
-plt.legend(frameon=False, ncols=1, loc='lower right')
+plt.legend(frameon=False, ncols=1)
 plt.savefig(destination + target_file.split(".")[0] + '_WS-SSIM' + '.pdf', bbox_inches='tight', pad_inches=0)
 #plt.show()
 
