@@ -86,13 +86,16 @@ def prepareQPhi(image:ndarray, quantization_matrix:ndarray, adjustment_coefficie
 	h, w = image.shape
 	k_lut, min_lut, max_lut = build_LUT(h)
 	print(f"Altura: {h}, Largura: {w}")
-	print('Abaixo digite a elevação alvo para obter as matrizes de quantização Q_forward e Q_backward com valores maiores que -pi/2 e menores que pi/2')
-	elevation_alvo = float(input('Digite a elevação alvo: '))
+	elevation_alvo = pi/8
 	if elevation_alvo < -pi/2 or elevation_alvo > pi/2:
 		print('Elevação alvo fora do intervalo [-pi/2, pi/2]')
 		return
 	q_alvo_f = np2_round(divide(QtildeAtEl(k_lut, min_lut, max_lut, elevation_alvo, quantization_matrix), adjustment_coefficients))
 	q_alvo_b = np2_round(multiply(QtildeAtEl(k_lut, min_lut, max_lut, elevation_alvo, quantization_matrix), adjustment_coefficients))
+	print('Quantization matrix:')
+	print(quantization_matrix)
+	print('Scaling matrix:')
+	print(adjustment_coefficients)
 	print('Q_forward:')
 	print(q_alvo_f)
 	print()

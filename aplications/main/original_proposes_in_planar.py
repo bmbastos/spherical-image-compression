@@ -4,6 +4,7 @@ from numpy import *
 from time import time
 from skimage.io import imread
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
+from skimage.transform import resize as resize2
 from scipy import signal
 from matplotlib import pyplot as plot
 from pdb import set_trace as pause
@@ -58,10 +59,6 @@ def np2_round(quantization_matrix:matrix) -> matrix:
 def np2_ceil(quantization_matrix:matrix) -> matrix:
 	return power(2, ceil(log2(quantization_matrix))) # Não usar
 """ Função de transformação de uma matriz em uma matriz de potências de dois - Brahimi """
-
-def np2_floor(quantization_matrix:matrix) -> matrix:
-	return power(2, floor(log2(quantization_matrix))) # Não usar
-""" Função de transformação de uma matriz em uma matriz de potências de dois """
 
 def map_k_and_el(row_index:int, image_height:int) -> tuple:
 	el = row_index/image_height * pi - pi/2
@@ -195,7 +192,7 @@ def WSPSNR(img1, img2, max = 255.): # img1 e img2 devem ter shape hx2h e ser em 
 
 # MAIN --------------------------------------------------------------------------------------------------
 # Pré processamento
-path_images = "../ImagesForTest/Spherical/4K/"
+path_images = os.getcwd() + "/images_for_tests/planar/"
 T = calculate_matrix_of_transformation(8)
 SO, so = compute_scale_matrix(TO)
 SB, sb = compute_scale_matrix(TB)
@@ -209,124 +206,104 @@ results = []
 target = 1
 processed_images = 0
 files = os.listdir(path_images)
+full_path = ''
 for file in files:
-	full_path = os.path.join(path_images, file)
-	if os.path.isfile(full_path):
-
+	if not os.path.isdir(path_images + file) and file.endswith(".tiff"):
+		#if processed_images == target:
+			#break
+		full_path = os.path.join(path_images, file)
 		image = imread(full_path, as_gray=True).astype(float)
+		#image = resize2(image, (128, 256), anti_aliasing=True)
+		
+
 		if image.max() <= 1:
 			image = around(255*image)
 		h, w = image.shape
 		A = Tools.umount(image, (8, 8))# - 128
-		JpegPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T)
-		OliveiraPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO, A), TO.T)
-		BrahimiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB, A), TB.T)
-		RaizaPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
+		print(f"{file} - {h}x{w} - {processed_images+1}/{len(files)}")
+
+		ZT_tiled = tile(asarray([T]), (A.shape[0], 1, 1))
 		ZO_tiled = tile(asarray([ZO]), (A.shape[0], 1, 1))
 		ZB_tiled = tile(asarray([ZB]), (A.shape[0], 1, 1))
 		ZR_tiled = tile(asarray([ZR]), (A.shape[0], 1, 1))
 
-		BUFFER = {'JPEG_Spherical': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-					'RA_Q_FR_S_LowCost': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-					'OL_Q_FR_S_LowCost': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-					'RA_Q_FC_S_LowCost': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-					'OL_Q_FC_S_LowCost': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-					'RA_Q_FF_S_LowCost': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-					'OL_Q_FF_S_LowCost': {'PSNR':[], 'SSIM':[], 'BPP':[]}}
+		BUFFER = {'JPEG': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+					'OLIVEIRA': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+					'BRAHIMI': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+					'RAIZA': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+					'DE_SIMONE': {'PSNR':[], 'SSIM':[], 'BPP':[]}}
 
 
-		for QF in tqdm(quantization_factor):
+		for QF in quantization_factor:
 			QOliveira = adjust_quantization(QF, Q0)
-			QPhiOliveira = prepareQPhi(image, QOliveira)
 			
-			# JPEG ESFÉRICO sem np2
-			JSPrime2 = multiply(around(divide(JpegPrime1, QPhiOliveira)), QPhiOliveira)
-			JSPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, JSPrime2), T)
-			B = clip(Tools.remount(JSPrime3, (h, w)), 0, 255)
-			JSPrime2 = JSPrime2.reshape(h, w)
-			BUFFER['JPEG_Spherical']['PSNR'].append(WSPSNR(image, B))
-			BUFFER['JPEG_Spherical']['SSIM'].append(WSSSIM(image, B))
-			BUFFER['JPEG_Spherical']['BPP'].append(bpp(JSPrime2))
-			
-			# Raiza ------------------------------------------------------------------------------------------------------------------------------------- R
-			QPhiRaizaForward = prepareQPhi(image, np2_floor(divide(QOliveira, ZR)))
-			QPhiRaizaBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZR)))
-			RaizaPermutation1Prime2 = multiply(around(divide(RaizaPrime1, QPhiRaizaForward)), QPhiRaizaBackward)
-			RaizaPermutation1Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaPermutation1Prime2), TR)
-			C = clip(Tools.remount(RaizaPermutation1Prime3, (h, w)), 0, 255)
-			RaizaPermutation1Prime2 = RaizaPermutation1Prime2.reshape(h, w)
-			BUFFER['RA_Q_FR_S_LowCost']['PSNR'].append(WSPSNR(image, C))
-			BUFFER['RA_Q_FR_S_LowCost']['SSIM'].append(WSSSIM(image, C))
-			BUFFER['RA_Q_FR_S_LowCost']['BPP'].append(bpp(RaizaPermutation1Prime2))
-			
-			# RDCT
-			QPhiOliveiraForward = prepareQPhi(image, np2_floor(divide(QOliveira, ZO)))
-			QPhiOliveiraBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZO)))
-			OliveiraPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraForward)), QPhiOliveiraBackward)
-			OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
-			D = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
-			OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
-			BUFFER['OL_Q_FR_S_LowCost']['PSNR'].append(WSPSNR(image, D))
-			BUFFER['OL_Q_FR_S_LowCost']['SSIM'].append(WSSSIM(image, D))
-			BUFFER['OL_Q_FR_S_LowCost']['BPP'].append(bpp(OliveiraPrime2))
+			# JPEG
+			JpegPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T)
+			JpegPrime2 = multiply(around(divide(JpegPrime1, QOliveira)), QOliveira)
+			JpegPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, JpegPrime2), T)
+			B = clip(Tools.remount(JpegPrime3, (h, w)), 0, 255)
+			JpegPrime2 = JpegPrime2.reshape(h, w)
+			BUFFER['JPEG']['PSNR'].append(peak_signal_noise_ratio(image, B, data_range=255))
+			BUFFER['JPEG']['SSIM'].append(structural_similarity(image, B, data_range=255))
+			BUFFER['JPEG']['BPP'].append(bpp(JpegPrime2))
+			del JpegPrime1; del JpegPrime2; del JpegPrime3; del B		
 
-			# Raiza ------------------------------------------------------------------------------------------------------------------------------------- C
-			QPhiRaizaForward = prepareQPhi(image, np2_floor(divide(QOliveira, ZR)))
-			QPhiRaizaBackward = prepareQPhi(image, np2_ceil(multiply(QOliveira, ZR)))
-			RaizaPermutation1Prime2 = multiply(around(divide(RaizaPrime1, QPhiRaizaForward)), QPhiRaizaBackward)
-			RaizaPermutation1Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaPermutation1Prime2), TR)
-			E = clip(Tools.remount(RaizaPermutation1Prime3, (h, w)), 0, 255)
-			RaizaPermutation1Prime2 = RaizaPermutation1Prime2.reshape(h, w)
-			BUFFER['RA_Q_FC_S_LowCost']['PSNR'].append(WSPSNR(image, E))
-			BUFFER['RA_Q_FC_S_LowCost']['SSIM'].append(WSSSIM(image, E))
-			BUFFER['RA_Q_FC_S_LowCost']['BPP'].append(bpp(RaizaPermutation1Prime2))
-			
-			# RDCT
-			QPhiOliveiraForward = prepareQPhi(image, np2_floor(divide(QOliveira, ZO)))
-			QPhiOliveiraBackward = prepareQPhi(image, np2_ceil(multiply(QOliveira, ZO)))
-			OliveiraPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraForward)), QPhiOliveiraBackward)
+			# OLIVEIRA
+			OliveiraPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO, A), TO.T)
+			QOliveiraForward = asarray(np2_round(divide(QOliveira, ZO)))
+			QOliveiraBackward = asarray(np2_round(multiply(QOliveira, ZO)))
+			OliveiraPrime2 = multiply(around(divide(OliveiraPrime1, QOliveiraForward)), QOliveiraBackward)
 			OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
-			F = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
+			C = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
 			OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
-			BUFFER['OL_Q_FC_S_LowCost']['PSNR'].append(WSPSNR(image, F))
-			BUFFER['OL_Q_FC_S_LowCost']['SSIM'].append(WSSSIM(image, F))
-			BUFFER['OL_Q_FC_S_LowCost']['BPP'].append(bpp(OliveiraPrime2))
+			BUFFER['OLIVEIRA']['PSNR'].append(peak_signal_noise_ratio(image, C, data_range=255))
+			BUFFER['OLIVEIRA']['SSIM'].append(structural_similarity(image, C, data_range=255))
+			BUFFER['OLIVEIRA']['BPP'].append(bpp(OliveiraPrime2))
+			del OliveiraPrime1; del OliveiraPrime2; del OliveiraPrime3; del C; del QOliveiraForward; del QOliveiraBackward
 
-			# Raiza ------------------------------------------------------------------------------------------------------------------------------------- F
-			QPhiRaizaForward = prepareQPhi(image, np2_floor(divide(QOliveira, ZR)))
-			QPhiRaizaBackward = prepareQPhi(image, np2_floor(multiply(QOliveira, ZR)))
-			RaizaPermutation1Prime2 = multiply(around(divide(RaizaPrime1, QPhiRaizaForward)), QPhiRaizaBackward)
-			RaizaPermutation1Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaPermutation1Prime2), TR)
-			G = clip(Tools.remount(RaizaPermutation1Prime3, (h, w)), 0, 255)
-			RaizaPermutation1Prime2 = RaizaPermutation1Prime2.reshape(h, w)
-			BUFFER['RA_Q_FF_S_LowCost']['PSNR'].append(WSPSNR(image, G))
-			BUFFER['RA_Q_FF_S_LowCost']['SSIM'].append(WSSSIM(image, G))
-			BUFFER['RA_Q_FF_S_LowCost']['BPP'].append(bpp(RaizaPermutation1Prime2))
-			
-			# RDCT
-			QPhiOliveiraForward = prepareQPhi(image, np2_floor(divide(QOliveira, ZO)))
-			QPhiOliveiraBackward = prepareQPhi(image, np2_floor(multiply(QOliveira, ZO)))
-			OliveiraPrime2 = multiply(around(divide(OliveiraPrime1, QPhiOliveiraForward)), QPhiOliveiraBackward)
-			OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
-			H = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
-			OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
-			BUFFER['OL_Q_FF_S_LowCost']['PSNR'].append(WSPSNR(image, H))
-			BUFFER['OL_Q_FF_S_LowCost']['SSIM'].append(WSSSIM(image, H))
-			BUFFER['OL_Q_FF_S_LowCost']['BPP'].append(bpp(OliveiraPrime2))
+			# RAIZA
+			RaizaPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
+			QRaizaForward = asarray(divide(QOliveira, ZR))
+			QRaizaBackward = asarray(multiply(QOliveira, ZR))
+			RaizaPrime2 = multiply(around(divide(RaizaPrime1, QRaizaForward)), QRaizaBackward)
+			RaizaPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaPrime2), TR)
+			D = clip(Tools.remount(RaizaPrime3, (h, w)), 0, 255)
+			RaizaPrime2 = RaizaPrime2.reshape(h, w)
+			BUFFER['RAIZA']['PSNR'].append(peak_signal_noise_ratio(image, D, data_range=255))
+			BUFFER['RAIZA']['SSIM'].append(structural_similarity(image, D, data_range=255))
+			BUFFER['RAIZA']['BPP'].append(bpp(RaizaPrime2))
+			del RaizaPrime1; del RaizaPrime2; del RaizaPrime3; del D
+
+			# BRAHIMI
+			QBrahimi = adjust_quantization(QF, QB)
+			BrahimiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB, A), TB.T)
+			QBrahimiForward = asarray(np2_ceil(divide(QBrahimi, ZB)))
+			QBrahimiBackward = asarray(np2_ceil(multiply(QBrahimi, ZB)))
+			BrahimiPrime2 = multiply(around(divide(BrahimiPrime1, QBrahimiForward)), QBrahimiBackward)
+			BrahimiPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, BrahimiPrime2), TB)
+			E = clip(Tools.remount(BrahimiPrime3, (h, w)), 0, 255)
+			BrahimiPrime2 = BrahimiPrime2.reshape(h, w)
+			BUFFER['BRAHIMI']['PSNR'].append(peak_signal_noise_ratio(image, E, data_range=255))
+			BUFFER['BRAHIMI']['SSIM'].append(structural_similarity(image, E, data_range=255))
+			BUFFER['BRAHIMI']['BPP'].append(bpp(BrahimiPrime2))
+			del BrahimiPrime1; del BrahimiPrime2; del BrahimiPrime3; del E; del QBrahimiForward; del QBrahimiBackward; del QBrahimi; del QOliveira
 
 		processed_images += 1
-		results.append({'File name':file, 'Method':"JPEG Spherical", 'PSNR':BUFFER['JPEG_Spherical']['PSNR'], 'SSIM':BUFFER['JPEG_Spherical']['SSIM'], 'BPP':BUFFER['JPEG_Spherical']['BPP']})
-		results.append({'File name':file, 'Method':"Raiza-FR", 'PSNR':BUFFER['RA_Q_FR_S_LowCost']['PSNR'], 'SSIM':BUFFER['RA_Q_FR_S_LowCost']['SSIM'], 'BPP':BUFFER['RA_Q_FR_S_LowCost']['BPP']})
-		results.append({'File name':file, 'Method':"Oliveira-FR", 'PSNR':BUFFER['OL_Q_FR_S_LowCost']['PSNR'], 'SSIM':BUFFER['OL_Q_FR_S_LowCost']['SSIM'], 'BPP':BUFFER['OL_Q_FR_S_LowCost']['BPP']})
-		results.append({'File name':file, 'Method':"Raiza-FC", 'PSNR':BUFFER['RA_Q_FC_S_LowCost']['PSNR'], 'SSIM':BUFFER['RA_Q_FC_S_LowCost']['SSIM'], 'BPP':BUFFER['RA_Q_FC_S_LowCost']['BPP']})
-		results.append({'File name':file, 'Method':"Oliveira-FC", 'PSNR':BUFFER['OL_Q_FC_S_LowCost']['PSNR'], 'SSIM':BUFFER['OL_Q_FC_S_LowCost']['SSIM'], 'BPP':BUFFER['OL_Q_FC_S_LowCost']['BPP']})
-		results.append({'File name':file, 'Method':"Raiza-FF", 'PSNR':BUFFER['RA_Q_FF_S_LowCost']['PSNR'], 'SSIM':BUFFER['RA_Q_FF_S_LowCost']['SSIM'], 'BPP':BUFFER['RA_Q_FF_S_LowCost']['BPP']})
-		results.append({'File name':file, 'Method':"Oliveira-FF", 'PSNR':BUFFER['OL_Q_FF_S_LowCost']['PSNR'], 'SSIM':BUFFER['OL_Q_FF_S_LowCost']['SSIM'], 'BPP':BUFFER['OL_Q_FF_S_LowCost']['BPP']})
-		
+		results.append({'File name':file, 'Method':"JPEG", 'PSNR':BUFFER['JPEG']['PSNR'], 'SSIM':BUFFER['JPEG']['SSIM'], 'BPP':BUFFER['JPEG']['BPP']})
+		results.append({'File name':file, 'Method':"OLIVEIRA", 'PSNR':BUFFER['OLIVEIRA']['PSNR'], 'SSIM':BUFFER['OLIVEIRA']['SSIM'], 'BPP':BUFFER['OLIVEIRA']['BPP']})
+		results.append({'File name':file, 'Method':"BRAHIMI", 'PSNR':BUFFER['BRAHIMI']['PSNR'], 'SSIM':BUFFER['BRAHIMI']['SSIM'], 'BPP':BUFFER['BRAHIMI']['BPP']})
+		results.append({'File name':file, 'Method':"RAIZA", 'PSNR':BUFFER['RAIZA']['PSNR'], 'SSIM':BUFFER['RAIZA']['SSIM'], 'BPP':BUFFER['RAIZA']['BPP']})
 results = sorted(results, key=itemgetter('File name'))
+
+
+destination = os.getcwd() + '/aplications/main/results/'
 fieldnames = ['File name', 'Method', 'PSNR', 'SSIM', 'BPP']
-with open('Teste_de_np2_F_transform.csv', 'w') as csv_file:
+with open(destination + 'original_proposes_in_planar.csv', 'w') as csv_file:
 	writer = csv.DictWriter(csv_file, fieldnames)
 	writer.writeheader()
 	for result in results:
 		writer.writerow(result)
+
+print('Processamento finalizado')
+
+

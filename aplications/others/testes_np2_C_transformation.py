@@ -9,8 +9,8 @@ from matplotlib import pyplot as plot
 from pdb import set_trace as pause
 from tqdm import tqdm
 from operator import itemgetter
-from matrixes import *
-from tools import *
+from ..mylibs.matrixes import *
+from ..mylibs.tools import Tools
 
 # DEFINIÇÃO DE FUNÇÕES
 
