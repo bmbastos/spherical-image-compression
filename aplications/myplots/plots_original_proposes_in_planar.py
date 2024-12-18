@@ -34,6 +34,7 @@ def pre_processing(csv_file_name: str) -> tuple:
 def averages(data_set: list, methods: list) -> dict:
 	n_images = len(data_set) // len(methods)
 	avgs = {}
+	labels = []
 	print(f'Quantidade de imagens {n_images}')
 	for method in methods:
 		avg_psnr = zeros(19, dtype=float)
@@ -44,28 +45,30 @@ def averages(data_set: list, methods: list) -> dict:
 				avg_psnr += array(data['PSNR'])
 				avg_ssim += array(data['SSIM'])
 				avg_bpp += array(data['BPP'])
+		label = ''
 
 		if method.startswith('JPEG'):
 			color, style = 'black', 'solid'
-			method = r'JPEG'
+			label = r'$\mathbf{C}, \mathbf{Q}_{J}$'
 		elif method.startswith('OLIVEIRA'):
 			color, style = 'red', 'dotted'
-			method = r'Oliveira et al. (2017)'
+			label = r'$\mathbf{T}_1, \mathbf{Q}_{J}, \operatorname{np2}^{\circ}$'
 		elif method.startswith('BRAHIMI'):
 			color, style = 'green', 'dotted'
-			method = r'Brahimi et al. (2021)'
+			label = r'$\mathbf{T}_2, \mathbf{Q}_{B}, \operatorname{np2}^{\uparrow}$'
 		elif method.startswith('RAIZA'):
 			color, style = 'magenta', 'dotted'
-			method = r'Raiza et al. (2018)'
+			label = r'$\mathbf{T}_3, \mathbf{Q}_{J}$'
 		elif method.startswith('DE_SIMONE'):
 			color, style = 'blue', 'dotted'
-			method = r'De Simone et al. (2016)'
+			label = r'$\mathbf{C}, \mathbf{Q}_{\phi}$'
 
 
 		avgs[method] = {
 			'PSNR': avg_psnr / n_images,
 			'SSIM': avg_ssim / n_images,
 			'BPP': avg_bpp / n_images,
+			'Label': label,
 			'Color': color,
 			'Style': style
 		}
@@ -78,9 +81,8 @@ path = "aplications/main/results/" + target_file
 print(f"PATH: {path}")
 destination = "aplications/myplots/results/"
 dataset, methods = pre_processing(path)
-methods.sort()
-methods.insert(0, methods.pop(methods.index("JPEG")))
 avgs = averages(dataset, methods)
+sorted_avgs = sorted(avgs.values(), key=lambda x: x['Label'])
 
 margin_int = 5
 margin_float = 0.2
@@ -89,6 +91,7 @@ max_bpp = max(max(avgs[avg]['BPP']) for avg in avgs) + margin_float
 min_psnr = round(min(min(avgs[avg]['PSNR']) for avg in avgs)) - margin_int
 min_ssim = min(min(avgs[avg]['SSIM']) for avg in avgs) - 0.03
 
+plt.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
 plt.rcParams['font.family'] = 'Times New Roman'
 plt.rcParams['font.size'] = 8
 plt.rcParams['text.usetex'] = True
@@ -98,15 +101,15 @@ handles_upper, labels_upper = [], []
 handles_middle, labels_middle = [], []
 
 # Plot WS-PSNR
-for avg in avgs:
-	line, = plt.plot(avgs[avg]['BPP'], avgs[avg]['PSNR'], marker='.', color=avgs[avg]['Color'], 
-			ls=avgs[avg]['Style'], label=avg, linewidth=1)
+for avg in sorted_avgs:
+	plt.plot(avg['BPP'], avg['PSNR'], marker='.', color=avg['Color'], 
+			ls=avg['Style'], label=avg['Label'], linewidth=1)
 plt.xlabel('Bitrate (bpp)')
-plt.ylabel('WS-PSNR (dB)')
+plt.ylabel('PSNR (dB)')
 plt.xlim(0, max_bpp)
 plt.ylim(0, max_psnr+25)
 plt.legend(frameon=False, ncols=1, loc='upper left')
-plt.savefig(destination + 'bastos_WS-PSNR_' + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
+plt.savefig(destination + 'bastos_PSNR_' + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
 #plt.show()
 plt.clf()
 plt.cla()
@@ -117,18 +120,18 @@ plt.rcParams['font.size'] = 8
 plt.rcParams['text.usetex'] = True
 plt.rcParams["figure.figsize"] = (3, 2)
 # Plot WS-SSIM
-for avg in avgs:
-	plt.plot(avgs[avg]['BPP'], avgs[avg]['SSIM'], marker='.', color=avgs[avg]['Color'], 
-			ls=avgs[avg]['Style'], label=avg, linewidth=1)
+for avg in sorted_avgs:
+	plt.plot(avg['BPP'], avg['SSIM'], marker='.', color=avg['Color'], 
+			ls=avg['Style'], label=avg['Label'], linewidth=1)
 plt.xlabel('Bitrate (bpp)')
-plt.ylabel('WS-SSIM')
+plt.ylabel('SSIM')
 plt.xlim(0, max_bpp)
 plt.ylim(0, 1+0.03)
 plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(0.2))
 plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1f'))
 #plt.legend(frameon=False, ncols=1, bbox_to_anchor=(0.45, 0.4))
 plt.legend(frameon=False, ncols=1, loc='lower right', markerfirst=False)
-plt.savefig(destination + 'bastos_WS-SSIM_'  + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
+plt.savefig(destination + 'bastos_SSIM_'  + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
 #plt.show()
 
 
