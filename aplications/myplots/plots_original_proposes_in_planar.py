@@ -52,13 +52,13 @@ def averages(data_set: list, methods: list) -> dict:
 			label = r'$\mathbf{C}, \mathbf{Q}_{J}$'
 		elif method.startswith('OLIVEIRA'):
 			color, style = 'red', 'dotted'
-			label = r'$\mathbf{T}_1, \mathbf{Q}_{J}, \operatorname{np2}^{\circ}$'
+			label = r'$\mathbf{T}_{1}, \operatorname{np2}^{\circ}(\mathbf{Q}_{J} \Box \mathbf{Z}_{1})$'
 		elif method.startswith('BRAHIMI'):
 			color, style = 'green', 'dotted'
-			label = r'$\mathbf{T}_2, \mathbf{Q}_{B}, \operatorname{np2}^{\uparrow}$'
+			label = r'$\mathbf{T}_{2}, \operatorname{np2}^{\uparrow}(\mathbf{Q}_{B} \Box \mathbf{Z}_{2})$'
 		elif method.startswith('RAIZA'):
 			color, style = 'magenta', 'dotted'
-			label = r'$\mathbf{T}_3, \mathbf{Q}_{J}$'
+			label = r'$\mathbf{T}_{3}, \mathbf{Q}_{J}$'
 		elif method.startswith('DE_SIMONE'):
 			color, style = 'blue', 'dotted'
 			label = r'$\mathbf{C}, \mathbf{Q}_{\phi}$'
@@ -91,7 +91,7 @@ max_bpp = max(max(avgs[avg]['BPP']) for avg in avgs) + margin_float
 min_psnr = round(min(min(avgs[avg]['PSNR']) for avg in avgs)) - margin_int
 min_ssim = min(min(avgs[avg]['SSIM']) for avg in avgs) - 0.03
 
-plt.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
+plt.rcParams['text.latex.preamble'] = r'\usepackage{amsmath, amssymb, bm}'
 plt.rcParams['font.family'] = 'Times New Roman'
 plt.rcParams['font.size'] = 8
 plt.rcParams['text.usetex'] = True
@@ -115,10 +115,6 @@ plt.clf()
 plt.cla()
 
 
-plt.rcParams['font.family'] = 'Times New Roman'
-plt.rcParams['font.size'] = 8
-plt.rcParams['text.usetex'] = True
-plt.rcParams["figure.figsize"] = (3, 2)
 # Plot WS-SSIM
 for avg in sorted_avgs:
 	plt.plot(avg['BPP'], avg['SSIM'], marker='.', color=avg['Color'], 

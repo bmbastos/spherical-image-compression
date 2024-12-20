@@ -49,25 +49,26 @@ def averages(data_set: list, methods: list) -> dict:
 
 		if method.startswith('JPEG'):
 			color, style = 'black', 'solid'
-			label = r'$\mathbf{C}, \mathbf{Q}_{(QF)}$'
+			label = r'$\mathbf{C}, \mathbf{Q}$'
 		elif method.startswith('OUR_P2'):
-			color, style = 'orange', 'solid'
-			label = r'$\mathbf{T}_3, \mathbf{\widetilde{Q}}_{\phi,(QF)}*$'
+			color, style = 'green', 'solid'
+			label = r'$\mathbf{T}_3, \mathbf{\widetilde{Q}}_{\phi}*$'
 		elif method.startswith('OUR_P3'):
-			color, style = 'green', 'dotted'
-			label = r'$\mathbf{T}_3, \mathbf{\widetilde{Q}}_{\phi,(QF)}$'
-		elif method.startswith('OUR_P4'):
 			color, style = 'red', 'solid'
-			label = r'$\mathbf{T}_3, \mathbf{\widetilde{Q}}_{\phi,(QF)}$'
+			label = r'$\mathbf{T}_3, \mathbf{\widetilde{Q}}_{\phi}$'
+		elif method.startswith('OUR_P4'):
+			color, style = 'orange', 'solid'
+			label = r'$\mathbf{T}_3, \mathbf{\widetilde{Q}}_{\phi}$'
 		elif method.startswith('DE_SIMONE'):
 			color, style = 'blue', 'solid'
-			label = r'$\mathbf{C}, \mathbf{Q}_{\phi,(QF)}$'
+			label = r'$\mathbf{C}, \mathbf{Q}_{\phi}$'
 
 
 		avgs[method] = {
 			'PSNR': avg_psnr / n_images,
 			'SSIM': avg_ssim / n_images,
 			'BPP': avg_bpp / n_images,
+			'Method': method,
 			'Label': label,
 			'Color': color,
 			'Style': style
@@ -76,7 +77,7 @@ def averages(data_set: list, methods: list) -> dict:
 
 # __MAIN__#
 print("Current path:", os.getcwd())
-target_file ="our_new_proposal_4K.csv"
+target_file ="our_new_proposal_8K.csv"
 path = "aplications/main/results/" + target_file
 destination = "aplications/myplots/results/"
 dataset, methods = pre_processing(path)
@@ -90,7 +91,7 @@ max_bpp = max(max(avgs[avg]['BPP']) for avg in avgs) + margin_float
 min_psnr = round(min(min(avgs[avg]['PSNR']) for avg in avgs)) - margin_int
 min_ssim = min(min(avgs[avg]['SSIM']) for avg in avgs) - 0.03
 
-plt.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
+plt.rcParams['text.latex.preamble'] = r'\usepackage{amsmath, amssymb, bm}'
 plt.rcParams['font.family'] = 'Times New Roman'
 plt.rcParams['font.size'] = 8
 plt.rcParams['text.usetex'] = True
@@ -98,13 +99,14 @@ plt.rcParams["figure.figsize"] = (3, 2)
 
 # Plot WS-PSNR
 for avg in sorted_avgs:
+	if 'JPEG' in avg['Method'] or 'P4' in avg['Method']: continue
 	plt.plot(avg['BPP'], avg['PSNR'], marker='.', color=avg['Color'], 
 			ls=avg['Style'], label=avg['Label'], linewidth=1)
 plt.xlabel('Bitrate (bpp)')
 plt.ylabel('WS-PSNR (dB)')
-plt.xlim(0, max_bpp)
-plt.ylim(25, max_psnr+10)
-plt.legend(frameon=False, ncols=2, loc='upper left')
+plt.xlim(0, 3)
+plt.ylim(25, 55)
+plt.legend(frameon=False, ncols=1, loc='upper right', markerfirst=False)
 plt.savefig(destination + 'bastos_Ws-PSNR_' + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
 #plt.show()
 plt.clf()
@@ -113,12 +115,13 @@ plt.cla()
 
 # Plot WS-SSIM
 for avg in sorted_avgs:
+	if 'JPEG' in avg['Method'] or 'P4' in avg['Method']: continue
 	plt.plot(avg['BPP'], avg['SSIM'], marker='.', color=avg['Color'], 
 			ls=avg['Style'], label=avg['Label'], linewidth=1)
 plt.xlabel('Bitrate (bpp)')
 plt.ylabel('WS-SSIM')
-plt.xlim(0, max_bpp)
-plt.ylim(0.7, 1+0.01)
+plt.xlim(0, 3)
+plt.ylim(0.7, 1)
 plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(0.1))
 plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1f'))
 #plt.legend(frameon=False, ncols=1, bbox_to_anchor=(0.45, 0.4))
