@@ -229,7 +229,6 @@ for file in files:
 			image = around(255*image)
 		h, w = image.shape
 		A = Tools.umount(image, (8, 8))# - 128
-		print(f"{file} - {h}x{w} - {processed_images+1}/{len(files)}")
 
 		ZT_tiled = tile(asarray([T]), (A.shape[0], 1, 1))
 		ZO_tiled = tile(asarray([ZO]), (A.shape[0], 1, 1))

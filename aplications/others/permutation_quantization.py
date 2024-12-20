@@ -224,7 +224,6 @@ for file in files:
 		full_path = os.path.join(path_images, file)
 		image = imread(full_path, as_gray=True).astype(float)
 		#image = resize2(image, (128, 256), anti_aliasing=True)
-		print(f'Processando {full_path} - {processed_images+1}/{len(files)}')
 
 		
 
