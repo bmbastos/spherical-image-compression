@@ -212,128 +212,125 @@ quantization_factor = range(5, 100, 5)
 results = []
 target = 1
 processed_images = 0
-for directory in directories:
-	partial_path = path_images + directory + '/'
-	print('Analysing directory:', directory)
-	files = os.listdir(partial_path)
-	
+files = os.listdir(path_images)
+
+for file in files:
 	full_path = ''
-	for file in files:
-		if not os.path.isdir(partial_path + file) and file.endswith(".bmp"):
-			#if processed_images == target:
-				#break
-			full_path = os.path.join(partial_path, file)
-			image = imread(full_path, as_gray=True).astype(float)
-			#image = resize2(image, (128, 256), anti_aliasing=True)
-			
+	if not os.path.isdir(path_images + file) and file.endswith(".bmp"):
+		#if processed_images == target:
+			#break
+		full_path = os.path.join(path_images, file)
+		image = imread(full_path, as_gray=True).astype(float)
+		#image = resize2(image, (128, 256), anti_aliasing=True)
+		print(f'Processando {full_path} - {processed_images+1}/{len(files)}')
+		
 
-			if image.max() <= 1:
-				image = around(255*image)
-			h, w = image.shape
-			A = Tools.umount(image, (8, 8))# - 128
-			print(f"{file} - {h}x{w} - {processed_images+1}/{len(files)}")
+		if image.max() <= 1:
+			image = around(255*image)
+		h, w = image.shape
+		A = Tools.umount(image, (8, 8))# - 128
+		print(f"{file} - {h}x{w} - {processed_images+1}/{len(files)}")
 
-			ZT_tiled = tile(asarray([T]), (A.shape[0], 1, 1))
-			ZO_tiled = tile(asarray([ZO]), (A.shape[0], 1, 1))
-			ZB_tiled = tile(asarray([ZB]), (A.shape[0], 1, 1))
-			ZR_tiled = tile(asarray([ZR]), (A.shape[0], 1, 1))
-
-
-			BUFFER = {'JPEG': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-						'DE_SIMONE': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-						'OUR_P2': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-						'OUR_P3': {'PSNR':[], 'SSIM':[], 'BPP':[]},
-						'OUR_P4': {'PSNR':[], 'SSIM':[], 'BPP':[]}}
+		ZT_tiled = tile(asarray([T]), (A.shape[0], 1, 1))
+		ZO_tiled = tile(asarray([ZO]), (A.shape[0], 1, 1))
+		ZB_tiled = tile(asarray([ZB]), (A.shape[0], 1, 1))
+		ZR_tiled = tile(asarray([ZR]), (A.shape[0], 1, 1))
 
 
-			for QF in quantization_factor:
-				QOliveira = adjust_quantization(QF, Q0)
-				"""
-				# JPEG
-				JpegPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T)
-				JpegPrime2 = multiply(around(divide(JpegPrime1, QOliveira)), QOliveira)
-				JpegPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, JpegPrime2), T)
-				B = clip(Tools.remount(JpegPrime3, (h, w)), 0, 255)
-				JpegPrime2 = JpegPrime2.reshape(h, w)
-				BUFFER['JPEG']['PSNR'].append(WSPSNR(image, B))
-				BUFFER['JPEG']['SSIM'].append(WSSSIM(image, B))
-				BUFFER['JPEG']['BPP'].append(bpp(JpegPrime2))
-				del JpegPrime1; del JpegPrime2; del JpegPrime3; del B
-				"""
+		BUFFER = {'JPEG': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+					'DE_SIMONE': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+					'OUR_P2': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+					'OUR_P3': {'PSNR':[], 'SSIM':[], 'BPP':[]},
+					'OUR_P4': {'PSNR':[], 'SSIM':[], 'BPP':[]}}
 
-				# DE SIMONE
-				QPhiOliveira = prepareQPhi(image, QOliveira)
-				PhiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T)
-				PhiPrime2 = multiply(around(divide(PhiPrime1, QPhiOliveira)), QPhiOliveira)
-				PhiPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, PhiPrime2), T)
-				C = clip(Tools.remount(PhiPrime3, (h, w)), 0, 255)
-				PhiPrime2 = PhiPrime2.reshape(h, w)
-				BUFFER['DE_SIMONE']['PSNR'].append(WSPSNR(image, C))
-				BUFFER['DE_SIMONE']['SSIM'].append(WSSSIM(image, C))
-				BUFFER['DE_SIMONE']['BPP'].append(bpp(PhiPrime2))
-				del PhiPrime1; del PhiPrime2; del PhiPrime3; del C; del QPhiOliveira
 
-				# OUR PROPOSAL WITH P2
-				P2Prime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
-				QPhiP2Forward = 0
-				QPhiP2Backward = 0
-				if np2 == 'ceil':
-					QPhiP2Forward = np2_ceil(divide(prepareQPhi(image, QOliveira), ZR_tiled))
-					QPhiP2Backward = np2_ceil(multiply(prepareQPhi(image, QOliveira), ZR_tiled))
-				elif np2 == 'floor':
-					QPhiP2Forward = np2_floor(divide(prepareQPhi(image, QOliveira), ZR_tiled))
-					QPhiP2Backward = np2_floor(multiply(prepareQPhi(image, QOliveira), ZR_tiled))
-				P2Prime2 = multiply(around(divide(P2Prime1, QPhiP2Forward)), QPhiP2Backward)
-				P2Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, P2Prime2), TR)
-				P2 = clip(Tools.remount(P2Prime3, (h, w)), 0, 255)
-				P2Prime2 = P2Prime2.reshape(h, w)
-				BUFFER['OUR_P2']['PSNR'].append(WSPSNR(image, P2))
-				BUFFER['OUR_P2']['SSIM'].append(WSSSIM(image, P2))
-				BUFFER['OUR_P2']['BPP'].append(bpp(P2Prime2))
-				del P2Prime1; del P2Prime2; del P2Prime3; del P2; del QPhiP2Forward; del QPhiP2Backward
+		for QF in quantization_factor:
+			QOliveira = adjust_quantization(QF, Q0)
+			"""
+			# JPEG
+			JpegPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T)
+			JpegPrime2 = multiply(around(divide(JpegPrime1, QOliveira)), QOliveira)
+			JpegPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, JpegPrime2), T)
+			B = clip(Tools.remount(JpegPrime3, (h, w)), 0, 255)
+			JpegPrime2 = JpegPrime2.reshape(h, w)
+			BUFFER['JPEG']['PSNR'].append(WSPSNR(image, B))
+			BUFFER['JPEG']['SSIM'].append(WSSSIM(image, B))
+			BUFFER['JPEG']['BPP'].append(bpp(JpegPrime2))
+			del JpegPrime1; del JpegPrime2; del JpegPrime3; del B
+			"""
 
-				# OUR PROPOSAL WITH P3
-				P3Prime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
-				QPhiP3Forward = 0
-				QPhiP3Backward = 0
-				if np2 == 'ceil':
-					QPhiP3Forward = prepareQPhi(image, np2_ceil(divide(QOliveira, ZR)))
-					QPhiP3Backward = prepareQPhi(image, np2_ceil(multiply(QOliveira, ZR)))
-				elif np2 == 'floor':
-					QPhiP3Forward = prepareQPhi(image, np2_floor(divide(QOliveira, ZR)))
-					QPhiP3Backward = prepareQPhi(image, np2_floor(multiply(QOliveira, ZR)))
-				P3Prime2 = multiply(around(divide(P3Prime1, QPhiP3Forward)), QPhiP3Backward)
-				P3Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, P3Prime2), TR)
-				P3 = clip(Tools.remount(P3Prime3, (h, w)), 0, 255)
-				P3Prime2 = P3Prime2.reshape(h, w)
-				BUFFER['OUR_P3']['PSNR'].append(WSPSNR(image, P3))
-				BUFFER['OUR_P3']['SSIM'].append(WSSSIM(image, P3))
-				BUFFER['OUR_P3']['BPP'].append(bpp(P3Prime2))
-				del P3Prime1; del P3Prime2; del P3Prime3; del P3; del QPhiP3Forward; del QPhiP3Backward
+			# DE SIMONE
+			QPhiOliveira = prepareQPhi(image, QOliveira)
+			PhiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T, A), T.T)
+			PhiPrime2 = multiply(around(divide(PhiPrime1, QPhiOliveira)), QPhiOliveira)
+			PhiPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', T.T, PhiPrime2), T)
+			C = clip(Tools.remount(PhiPrime3, (h, w)), 0, 255)
+			PhiPrime2 = PhiPrime2.reshape(h, w)
+			BUFFER['DE_SIMONE']['PSNR'].append(WSPSNR(image, C))
+			BUFFER['DE_SIMONE']['SSIM'].append(WSSSIM(image, C))
+			BUFFER['DE_SIMONE']['BPP'].append(bpp(PhiPrime2))
+			del PhiPrime1; del PhiPrime2; del PhiPrime3; del C; del QPhiOliveira
 
-				"""
-				# OUR PROPOSAL WITH P4
-				P4Prime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
-				QPhiP4Forward = np2_round(prepareQPhi(image, divide(QOliveira, ZR)))
-				QPhiP4Backward = np2_round(prepareQPhi(image, multiply(QOliveira, ZR)))
-				P4Prime2 = multiply(around(divide(P4Prime1, QPhiP4Forward)), QPhiP4Backward)
-				P4Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, P4Prime2), TR)
-				P4 = clip(Tools.remount(P4Prime3, (h, w)), 0, 255)
-				P4Prime2 = P4Prime2.reshape(h, w)
-				BUFFER['OUR_P4']['PSNR'].append(WSPSNR(image, P4))
-				BUFFER['OUR_P4']['SSIM'].append(WSSSIM(image, P4))
-				BUFFER['OUR_P4']['BPP'].append(bpp(P4Prime2))
-				del P4Prime1; del P4Prime2; del P4Prime3; del P4; del QPhiP4Forward; del QPhiP4Backward
-				"""
+			# OUR PROPOSAL WITH P2
+			P2Prime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
+			QPhiP2Forward = 0
+			QPhiP2Backward = 0
+			if np2 == 'ceil':
+				QPhiP2Forward = np2_ceil(divide(prepareQPhi(image, QOliveira), ZR_tiled))
+				QPhiP2Backward = np2_ceil(multiply(prepareQPhi(image, QOliveira), ZR_tiled))
+			elif np2 == 'floor':
+				QPhiP2Forward = np2_floor(divide(prepareQPhi(image, QOliveira), ZR_tiled))
+				QPhiP2Backward = np2_floor(multiply(prepareQPhi(image, QOliveira), ZR_tiled))
+			P2Prime2 = multiply(around(divide(P2Prime1, QPhiP2Forward)), QPhiP2Backward)
+			P2Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, P2Prime2), TR)
+			P2 = clip(Tools.remount(P2Prime3, (h, w)), 0, 255)
+			P2Prime2 = P2Prime2.reshape(h, w)
+			BUFFER['OUR_P2']['PSNR'].append(WSPSNR(image, P2))
+			BUFFER['OUR_P2']['SSIM'].append(WSSSIM(image, P2))
+			BUFFER['OUR_P2']['BPP'].append(bpp(P2Prime2))
+			del P2Prime1; del P2Prime2; del P2Prime3; del P2; del QPhiP2Forward; del QPhiP2Backward
 
-			
-			processed_images += 1
-			#results.append({'File name':file, 'Method':"JPEG", 'PSNR':BUFFER['JPEG']['PSNR'], 'SSIM':BUFFER['JPEG']['SSIM'], 'BPP':BUFFER['JPEG']['BPP']})
-			results.append({'File name':file, 'Method':"DE_SIMONE", 'PSNR':BUFFER['DE_SIMONE']['PSNR'], 'SSIM':BUFFER['DE_SIMONE']['SSIM'], 'BPP':BUFFER['DE_SIMONE']['BPP']})
-			results.append({'File name':file, 'Method':"OUR_P2", 'PSNR':BUFFER['OUR_P2']['PSNR'], 'SSIM':BUFFER['OUR_P2']['SSIM'], 'BPP':BUFFER['OUR_P2']['BPP']})
-			results.append({'File name':file, 'Method':"OUR_P3", 'PSNR':BUFFER['OUR_P3']['PSNR'], 'SSIM':BUFFER['OUR_P3']['SSIM'], 'BPP':BUFFER['OUR_P3']['BPP']})
-			#results.append({'File name':file, 'Method':"OUR_P4", 'PSNR':BUFFER['OUR_P4']['PSNR'], 'SSIM':BUFFER['OUR_P4']['SSIM'], 'BPP':BUFFER['OUR_P4']['BPP']})
-	processed_images = 0
+			# OUR PROPOSAL WITH P3
+			P3Prime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
+			QPhiP3Forward = 0
+			QPhiP3Backward = 0
+			if np2 == 'ceil':
+				QPhiP3Forward = prepareQPhi(image, np2_ceil(divide(QOliveira, ZR)))
+				QPhiP3Backward = prepareQPhi(image, np2_ceil(multiply(QOliveira, ZR)))
+			elif np2 == 'floor':
+				QPhiP3Forward = prepareQPhi(image, np2_floor(divide(QOliveira, ZR)))
+				QPhiP3Backward = prepareQPhi(image, np2_floor(multiply(QOliveira, ZR)))
+			P3Prime2 = multiply(around(divide(P3Prime1, QPhiP3Forward)), QPhiP3Backward)
+			P3Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, P3Prime2), TR)
+			P3 = clip(Tools.remount(P3Prime3, (h, w)), 0, 255)
+			P3Prime2 = P3Prime2.reshape(h, w)
+			BUFFER['OUR_P3']['PSNR'].append(WSPSNR(image, P3))
+			BUFFER['OUR_P3']['SSIM'].append(WSSSIM(image, P3))
+			BUFFER['OUR_P3']['BPP'].append(bpp(P3Prime2))
+			del P3Prime1; del P3Prime2; del P3Prime3; del P3; del QPhiP3Forward; del QPhiP3Backward
+
+			"""
+			# OUR PROPOSAL WITH P4
+			P4Prime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
+			QPhiP4Forward = np2_round(prepareQPhi(image, divide(QOliveira, ZR)))
+			QPhiP4Backward = np2_round(prepareQPhi(image, multiply(QOliveira, ZR)))
+			P4Prime2 = multiply(around(divide(P4Prime1, QPhiP4Forward)), QPhiP4Backward)
+			P4Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, P4Prime2), TR)
+			P4 = clip(Tools.remount(P4Prime3, (h, w)), 0, 255)
+			P4Prime2 = P4Prime2.reshape(h, w)
+			BUFFER['OUR_P4']['PSNR'].append(WSPSNR(image, P4))
+			BUFFER['OUR_P4']['SSIM'].append(WSSSIM(image, P4))
+			BUFFER['OUR_P4']['BPP'].append(bpp(P4Prime2))
+			del P4Prime1; del P4Prime2; del P4Prime3; del P4; del QPhiP4Forward; del QPhiP4Backward
+			"""
+
+		
+		processed_images += 1
+		#results.append({'File name':file, 'Method':"JPEG", 'PSNR':BUFFER['JPEG']['PSNR'], 'SSIM':BUFFER['JPEG']['SSIM'], 'BPP':BUFFER['JPEG']['BPP']})
+		results.append({'File name':file, 'Method':"DE_SIMONE", 'PSNR':BUFFER['DE_SIMONE']['PSNR'], 'SSIM':BUFFER['DE_SIMONE']['SSIM'], 'BPP':BUFFER['DE_SIMONE']['BPP']})
+		results.append({'File name':file, 'Method':"OUR_P2", 'PSNR':BUFFER['OUR_P2']['PSNR'], 'SSIM':BUFFER['OUR_P2']['SSIM'], 'BPP':BUFFER['OUR_P2']['BPP']})
+		results.append({'File name':file, 'Method':"OUR_P3", 'PSNR':BUFFER['OUR_P3']['PSNR'], 'SSIM':BUFFER['OUR_P3']['SSIM'], 'BPP':BUFFER['OUR_P3']['BPP']})
+		#results.append({'File name':file, 'Method':"OUR_P4", 'PSNR':BUFFER['OUR_P4']['PSNR'], 'SSIM':BUFFER['OUR_P4']['SSIM'], 'BPP':BUFFER['OUR_P4']['BPP']})
 
 results = sorted(results, key=itemgetter('File name'))
 
