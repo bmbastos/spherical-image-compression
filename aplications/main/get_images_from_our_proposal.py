@@ -6,8 +6,8 @@ from scipy import signal
 from skimage.io import imread
 import matplotlib.pyplot as plt
 from pdb import set_trace as pause
-from matrixes import *
-from tools import *
+from ..mylibs.matrixes import *
+from ..mylibs.tools import Tools
 
 def pre_processing(csv_file_name: str) -> tuple:
 	data_set = []
@@ -17,14 +17,20 @@ def pre_processing(csv_file_name: str) -> tuple:
 		for row in reader:
 			file_name, method, psnr, ssim, bpp = row.values()
 			methods.append(method)
+
+			# Helper function to clean and convert values
+			def clean_and_convert(value_str):
+				return list(map(float, value_str.replace('np.float64(', '').replace(')', '').strip('[]').split(',')))
+
 			data_set.append({
 				'Filename': file_name,
 				'Method': method,
-				'PSNR': list(map(float, psnr.strip('[]').split(','))),
-				'SSIM': list(map(float, ssim.strip('[]').split(','))),
-				'BPP': list(map(float, bpp.strip('[]').split(',')))
+				'PSNR': clean_and_convert(psnr),
+				'SSIM': clean_and_convert(ssim),
+				'BPP': clean_and_convert(bpp)
 			})
-	methods = list(set(methods))  # Remover duplicatas de métodos
+	
+	methods = list(set(methods))
 	return data_set, methods
 
 
@@ -140,65 +146,68 @@ def prepareQPhi(image:ndarray, quantization_matrix:ndarray, N = 8):
 
 def WSSSIM(img1, img2, K1 = .01, K2 = .03, L = 255):
 
-    def __fspecial_gauss(size, sigma):
-        x, y = mgrid[-size//2 + 1:size//2 + 1, -size//2 + 1:size//2 + 1]
-        g = exp(-((x**2 + y**2)/(2.0*sigma**2)))
-        return g/g.sum()
+	def __fspecial_gauss(size, sigma):
+		x, y = mgrid[-size//2 + 1:size//2 + 1, -size//2 + 1:size//2 + 1]
+		g = exp(-((x**2 + y**2)/(2.0*sigma**2)))
+		return g/g.sum()
 
-    def __weights(height, width):
-        deltaTheta = 2*pi/width 
-        column = asarray([cos( deltaTheta * (j - height/2.+0.5)) for j in range(height)])
-        return repeat(column[:, newaxis], width, 1)
+	def __weights(height, width):
+		deltaTheta = 2*pi/width 
+		column = asarray([cos( deltaTheta * (j - height/2.+0.5)) for j in range(height)])
+		return repeat(column[:, newaxis], width, 1)
 
-    img1 = float64(img1)
-    img2 = float64(img2)
+	img1 = float64(img1)
+	img2 = float64(img2)
 
-    k = 11
-    sigma = 1.5
-    window = __fspecial_gauss(k, sigma)
-    window2 = zeros_like(window); window2[k//2,k//2] = 1 
- 
-    C1 = (K1*L)**2
-    C2 = (K2*L)**2
+	k = 11
+	sigma = 1.5
+	window = __fspecial_gauss(k, sigma)
+	window2 = zeros_like(window); window2[k//2,k//2] = 1 
 
-    mu1 = signal.convolve2d(img1, window, 'valid')
-    mu2 = signal.convolve2d(img2, window, 'valid')
-    
-    mu1_sq = mu1*mu1
-    mu2_sq = mu2*mu2
-    mu1_mu2 = mu1*mu2
-    
-    sigma1_sq = signal.convolve2d(img1*img1, window, 'valid') - mu1_sq
-    sigma2_sq = signal.convolve2d(img2*img2, window, 'valid') - mu2_sq
-    sigma12 = signal.convolve2d(img1*img2, window, 'valid') - mu1_mu2
-   
-    W = __weights(*img1.shape)
-    Wi = signal.convolve2d(W, window2, 'valid')
+	C1 = (K1*L)**2
+	C2 = (K2*L)**2
 
-    ssim_map = ((2*mu1_mu2 + C1)*(2*sigma12 + C2))/((mu1_sq + mu2_sq + C1)*(sigma1_sq + sigma2_sq + C2)) * Wi
-    mssim = sum(ssim_map)/sum(Wi)
+	mu1 = signal.convolve2d(img1, window, 'valid')
+	mu2 = signal.convolve2d(img2, window, 'valid')
+	
+	mu1_sq = mu1*mu1
+	mu2_sq = mu2*mu2
+	mu1_mu2 = mu1*mu2
+	
+	sigma1_sq = signal.convolve2d(img1*img1, window, 'valid') - mu1_sq
+	sigma2_sq = signal.convolve2d(img2*img2, window, 'valid') - mu2_sq
+	sigma12 = signal.convolve2d(img1*img2, window, 'valid') - mu1_mu2
 
-    return mssim
+	W = __weights(*img1.shape)
+	Wi = signal.convolve2d(W, window2, 'valid')
+
+	ssim_map = ((2*mu1_mu2 + C1)*(2*sigma12 + C2))/((mu1_sq + mu2_sq + C1)*(sigma1_sq + sigma2_sq + C2)) * Wi
+	mssim = sum(ssim_map)/sum(Wi)
+
+	return mssim
 
 
 def WSPSNR(img1, img2, max = 255.): # img1 e img2 devem ter shape hx2h e ser em grayscale; max eh o maximo valor possivel em img1 e img2 (verificar se deve ser 1 ou 255)
 
-   def __weights(height, width):
-      phis = arange(height+1)*pi/height
-      deltaTheta = 2*pi/width 
-      column = asarray([deltaTheta * (-cos(phis[j+1])+cos(phis[j])) for j in range(height)])
-      return repeat(column[:, newaxis], width, 1)
+	def __weights(height, width):
+		phis = arange(height+1)*pi/height
+		deltaTheta = 2*pi/width 
+		column = asarray([deltaTheta * (-cos(phis[j+1])+cos(phis[j])) for j in range(height)])
+		return repeat(column[:, newaxis], width, 1)
 
-   w = __weights(*img1.shape)
-   # from matplotlib import pyplot as plt; plt.imshow(w); plt.show()
-   wmse = sum((img1-img2)**2*w)/(4*pi) # É ASSIM MESMO
-   return 10*log10(max**2/wmse)
+	w = __weights(*img1.shape)
+	# from matplotlib import pyplot as plt; plt.imshow(w); plt.show()
+	wmse = sum((img1-img2)**2*w)/(4*pi) # É ASSIM MESMO
+	return 10*log10(max**2/wmse)
 
 
 
 # __MAIN__ #
-target_file = "our_proposal.csv"
-target_image = "Harbor"
+sec = int(input('Digite para qual seção será gerada as imagens (1- Proposta Original, 2 - Permutando Transformada, 3 - Permutando Quantização): '))
+target_file = "our_new_proposal_4K.csv"
+if sec == 1:
+	target_file = "aplications/others/results/"
+target_image = "AerialCity_3840x1920_30fps_8bit_420_erp_0"
 target_bpp = 0.4
 
 # Pre-processamento dos dados
@@ -218,7 +227,7 @@ print(f"Métodos com os valores de QF e BPP mais próximos de {target_bpp}:")
 print(qfs)
 print()
 
-path_images = "../ImagesForTest/Spherical"
+path_images = os.getcwd() + "/images_for_tests/spherical/by_resolution/"
 T = calculate_matrix_of_transformation(8)
 SO, so = compute_scale_matrix(TO)
 SB, sb = compute_scale_matrix(TB)
@@ -227,16 +236,28 @@ ZO = dot(so.T, so)
 ZB = dot(sb.T, sb)
 ZR = dot(sr.T, sr)
 
+
+T1 = 0
+Z1 = 0
+Q1 = 0
+if sec == 1:
+	T1 = TR
+	Z1 = ZR
+elif sec == 2:
+	T1 = TO
+	Z1 = ZO
+elif sec == 3:
+	Q1 = QB
+
 files = os.listdir(path_images)
 for file in files:
-	if not file.startswith('Harbor'): continue
+	if not file.startswith(target_image): continue
 	full_path = os.path.join(path_images, file)
 	if os.path.isfile(full_path) == False: continue
 
 	image = imread(full_path, as_gray=True).astype(float)
 	plt.axis('off'); plt.imshow(image, cmap='gray')
-	#plt.savefig(file.split('.')[0] + '.png',format='png', bbox_inches='tight', pad_inches=0)
-	plt.imsave(file.split('.')[0] + '.png', image, cmap='gray')
+	plt.imsave('IMG_ORIGINAL_' + file.split('.')[0] + '.png', image, cmap='gray')
 	plt.clf()
 	pause()
 
@@ -264,64 +285,44 @@ for file in files:
 	print(qfs['DE_SIMONE'][1])
 	plt.axis('off')
 	plt.imshow(C, cmap='gray')
-	#plt.savefig('IMG_DE_SIMONE_' + file.split('.')[0] + '.png', bbox_inches='tight', pad_inches=0)
 	plt.imsave('IMG_DE_SIMONE_' + file.split('.')[0] + '.png', C, cmap='gray')
 	plt.clf()
 	del PhiPrime1; del PhiPrime2; del PhiPrime3; del C; del QPhiOliveira; del QOliveira; print()
 
-	print('OLIVEIRA')
-	QOliveira = adjust_quantization(qfs['OLIVEIRA'][0], Q0)
-	OliveiraPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO, A), TO.T)
-	QOliveiraForward = prepareQPhi(image, np2_round(divide(QOliveira, ZO)))
-	QOliveiraBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZO)))
-	OliveiraPrime2 = multiply(around(divide(OliveiraPrime1, QOliveiraForward)), QOliveiraBackward)
-	OliveiraPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TO.T, OliveiraPrime2), TO)
-	D = clip(Tools.remount(OliveiraPrime3, (h, w)), 0, 255)
-	OliveiraPrime2 = OliveiraPrime2.reshape(h, w)
-	print(WSPSNR(image, D))
-	print(WSSSIM(image, D))
-	print(qfs['OLIVEIRA'][1])
+	print('P2')
+	QOliveiraP2 = adjust_quantization(qfs['OUR_P2'][0], Q0)
+	P2Prime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
+	QPhiP2Forward = np2_round(divide(prepareQPhi(image, QOliveiraP2), ZR_tiled))
+	QPhiP2Backward = np2_round(multiply(prepareQPhi(image, QOliveiraP2), ZR_tiled))
+	P2Prime2 = multiply(around(divide(P2Prime1, QPhiP2Forward)), QPhiP2Backward)
+	P2Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, P2Prime2), TR)
+	P2 = clip(Tools.remount(P2Prime3, (h, w)), 0, 255)
+	P2Prime2 = P2Prime2.reshape(h, w)
+	print(WSPSNR(image, P2))
+	print(WSSSIM(image, P2))
+	print(qfs['OUR_P2'][1])
 	plt.axis('off')
-	plt.imshow(D, cmap='gray')
-	#plt.savefig('IMG_OLIVEIRA_' + file.split('.')[0] + '.png', bbox_inches='tight', pad_inches=0)
-	plt.imsave('IMG_OLIVEIRA_' + file.split('.')[0] + '.png', D, cmap='gray')
+	plt.imshow(P2, cmap='gray')
+	plt.imsave('IMG_OUR_P2_' + file.split('.')[0] + '.png', P2, cmap='gray')
 	plt.clf()
-	del OliveiraPrime1; del OliveiraPrime2; del OliveiraPrime3; del D; del QOliveiraForward; del QOliveiraBackward; del QOliveira; print()
+	del P2Prime1; del P2Prime2; del P2Prime3; del P2; del QPhiP2Forward; del QPhiP2Backward; del QOliveiraP2; print()
 
-	print('RAIZA')
-	QOliveira = adjust_quantization(qfs['RAIZA'][0], Q0)
-	RaizaPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
-	QRaizaForward = prepareQPhi(image, np2_round(divide(QOliveira, ZR)))
-	QRaizaBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZR)))
-	RaizaPrime2 = multiply(around(divide(RaizaPrime1, QRaizaForward)), QRaizaBackward)
-	RaizaPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, RaizaPrime2), TR)
-	E = clip(Tools.remount(RaizaPrime3, (h, w)), 0, 255)
-	RaizaPrime2 = RaizaPrime2.reshape(h, w)
-	print(WSPSNR(image, E))
-	print(WSSSIM(image, E))
-	print(qfs['RAIZA'][1])
+	print('P3')
+	QOliveiraP3 = adjust_quantization(qfs['OUR_P3'][0], Q0)
+	P3Prime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR, A), TR.T)
+	QPhiP3Forward = prepareQPhi(image, np2_round(divide(QOliveira, ZR)))
+	QPhiP3Backward = prepareQPhi(image, np2_round(multiply(QOliveira, ZR)))
+	P3Prime2 = multiply(around(divide(P3Prime1, QPhiP3Forward)), QPhiP3Backward)
+	P3Prime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TR.T, P3Prime2), TR)
+	P3 = clip(Tools.remount(P3Prime3, (h, w)), 0, 255)
+	P3Prime2 = P3Prime2.reshape(h, w)
+	print(WSPSNR(image, P3))
+	print(WSSSIM(image, P3))
+	print(qfs['OUR_P3'][1])
 	plt.axis('off')
-	plt.imshow(E, cmap='gray')
-	#plt.savefig('IMG_RAIZA_' + file.split('.')[0] + '.png', bbox_inches='tight', pad_inches=0)
-	plt.imsave('IMG_RAIZA_' + file.split('.')[0] + '.png', E, cmap='gray')
+	plt.imshow(P3, cmap='gray')
+	plt.imsave('IMG_OUR_P3_' + file.split('.')[0] + '.png', P3, cmap='gray')
 	plt.clf()
-	del RaizaPrime1; del RaizaPrime2; del RaizaPrime3; del E; del QRaizaForward; del QRaizaBackward; del QOliveira; print()
+	del P3Prime1; del P3Prime2; del P3Prime3; del P3; del QPhiP3Forward; del QPhiP3Backward; del QOliveiraP3; print()
 
-	print('BRAHIMI')
-	QOliveira = adjust_quantization(qfs['BRAHIMI'][0], Q0)
-	BrahimiPrime1 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB, A), TB.T)
-	QBrahimiForward = prepareQPhi(image, np2_round(divide(QOliveira, ZB)))
-	QBrahimiBackward = prepareQPhi(image, np2_round(multiply(QOliveira, ZB)))
-	BrahimiPrime2 = multiply(around(divide(BrahimiPrime1, QBrahimiForward)), QBrahimiBackward)
-	BrahimiPrime3 = einsum('mij, jk -> mik', einsum('ij, mjk -> mik', TB.T, BrahimiPrime2), TB)
-	F = clip(Tools.remount(BrahimiPrime3, (h, w)), 0, 255)
-	BrahimiPrime2 = BrahimiPrime2.reshape(h, w)
-	print(WSPSNR(image, F))
-	print(WSSSIM(image, F))
-	print(qfs['BRAHIMI'][1])
-	plt.axis('off')
-	plt.imshow(F, cmap='gray')
-	#plt.savefig('IMG_BRAHIMI_' + file.split('.')[0] + '.png', bbox_inches='tight', pad_inches=0)
-	plt.imsave('IMG_BRAHIMI_' + file.split('.')[0] + '.png', F, cmap='gray')
-	plt.clf()
-	del BrahimiPrime1; del BrahimiPrime2; del BrahimiPrime3; del F; del QBrahimiForward; del QBrahimiBackward; del QOliveira
+	print('Imagens geradas para nossa nova proposta')

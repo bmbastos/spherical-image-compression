@@ -113,8 +113,8 @@ def prepareQPhi(image:ndarray, quantization_matrix:ndarray, adjustment_coefficie
 
 
 ##__MAIN__##
-path_images = os.getcwd() + "/images_for_tests/spherical/by_resolution/8K/"
-file_init = "Harbor"
+path_images = os.getcwd() + "/images_for_tests/spherical/by_resolution/4K/"
+file_init = "AerialCity"
 files = os.listdir(path_images)
 for file in files:
 	if not file.startswith(file_init): continue
@@ -125,9 +125,9 @@ for file in files:
 	print(f"Nome de arquivo: {file}")
 	h, w = image.shape
 	quality_factor = 75
-	SO, so = compute_scale_matrix(TO)
-	ZO = dot(so.T, so)
+	SR, sr = compute_scale_matrix(TR)
+	ZR = dot(sr.T, sr)
 	Q = adjust_quantization(quality_factor, Q0)
-	QPhi = prepareQPhi(image, Q, ZO)
+	QPhi = prepareQPhi(image, Q, ZR)
 
 

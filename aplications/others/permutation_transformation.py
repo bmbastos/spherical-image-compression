@@ -193,7 +193,7 @@ def WSPSNR(img1, img2, max = 255.): # img1 e img2 devem ter shape hx2h e ser em 
 # MAIN --------------------------------------------------------------------------------------------------
 # Pré processamento
 path_images = os.getcwd() + "/images_for_tests/spherical/by_resolution/4K"
-transformation = 'Oliveira'
+transformation = 'Brahimi'
 T_LC = 0
 Z_LC = 0
 
@@ -329,7 +329,7 @@ results = sorted(results, key=itemgetter('File name'))
 
 destination = os.getcwd() + '/aplications/others/results/'
 fieldnames = ['File name', 'Method', 'PSNR', 'SSIM', 'BPP']
-with open(destination + 'permutation_transformation_4K.csv', 'w') as csv_file_4k:
+with open(destination + 'permutation_transformation' + transformation + '_4K.csv', 'w') as csv_file_4k:
 	writer_4k = csv.DictWriter(csv_file_4k, fieldnames)
 	writer_4k.writeheader()
 	for result in results:
