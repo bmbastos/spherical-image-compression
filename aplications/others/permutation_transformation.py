@@ -329,7 +329,7 @@ results = sorted(results, key=itemgetter('File name'))
 
 destination = os.getcwd() + '/aplications/others/results/'
 fieldnames = ['File name', 'Method', 'PSNR', 'SSIM', 'BPP']
-with open(destination + 'permutation_transformation' + transformation + '_4K.csv', 'w') as csv_file_4k:
+with open(destination + 'permutation_transformation_' + transformation + '_4K.csv', 'w') as csv_file_4k:
 	writer_4k = csv.DictWriter(csv_file_4k, fieldnames)
 	writer_4k.writeheader()
 	for result in results:
