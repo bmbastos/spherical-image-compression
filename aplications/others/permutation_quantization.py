@@ -192,7 +192,7 @@ def WSPSNR(img1, img2, max = 255.): # img1 e img2 devem ter shape hx2h e ser em 
 
 # MAIN --------------------------------------------------------------------------------------------------
 # Pré processamento
-path_images = os.getcwd() + "/images_for_tests/spherical/by_resolution/"
+path_images = os.getcwd() + "/images_for_tests/spherical/by_resolution/4K"
 quantization = 'Brahimi'
 Q = 0
 

@@ -196,7 +196,7 @@ def WSPSNR(img1, img2, max = 255.): # img1 e img2 devem ter shape hx2h e ser em 
 
 # MAIN --------------------------------------------------------------------------------------------------
 # Pré processamento
-path_images = os.getcwd() + "/images_for_tests/spherical/by_resolution/"
+path_images = os.getcwd() + "/images_for_tests/spherical/by_resolution/4K"
 np2 = 'ceil'
 
 directories = [d for d in os.listdir(path_images) if os.path.isdir(os.path.join(path_images, d))]
