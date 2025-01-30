@@ -116,6 +116,7 @@ def prepareQPhi(image:ndarray, quantization_matrix:ndarray, adjustment_coefficie
 path_images = os.getcwd() + "/images_for_tests/spherical/by_resolution/4K/"
 file_init = "AerialCity"
 files = os.listdir(path_images)
+J_8 = matrix(ones((8, 8), dtype=float))
 for file in files:
 	if not file.startswith(file_init): continue
 	full_path = path_images + file

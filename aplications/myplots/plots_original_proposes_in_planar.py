@@ -49,25 +49,29 @@ def averages(data_set: list, methods: list) -> dict:
 
 		if method.startswith('JPEG'):
 			color, style = 'black', 'solid'
-			label = r'$\mathbf{C}, \mathbf{Q}_{J}$'
+			label = r'$\mathbf{C}, \mathbf{Q}_\text{J}$'
 		elif method.startswith('OLIVEIRA'):
-			color, style = 'red', 'dotted'
-			label = r'$\mathbf{T}_{1}, \operatorname{np2}^{\circ}(\mathbf{Q}_{J} \Box \mathbf{Z}_{1})$'
+			color, style = 'red', 'dashed'
+			label = r'$\mathbf{T}_{1}, \operatorname{np2}^{\circ}(\mathbf{Q}_\text{J} \Box \mathbf{Z}_{1})$'
 		elif method.startswith('BRAHIMI'):
-			color, style = 'green', 'dotted'
-			label = r'$\mathbf{T}_{2}, \operatorname{np2}^{\uparrow}(\mathbf{Q}_{B} \Box \mathbf{Z}_{2})$'
+			color, style = 'green', 'dashed'
+			label = r'$\mathbf{T}_{2}, \operatorname{np2}^{\uparrow}(\mathbf{Q}_\text{B} \Box \mathbf{Z}_{2})$'
 		elif method.startswith('RAIZA'):
-			color, style = 'magenta', 'dotted'
-			label = r'$\mathbf{T}_{3}, \mathbf{Q}_{J}$'
+			color, style = 'orchid', 'dashed'
+			label = r'$\mathbf{T}_{3}, \mathbf{Q}_\text{J}$'
 		elif method.startswith('DE_SIMONE'):
-			color, style = 'blue', 'dotted'
+			color, style = 'blue', 'dashed'
 			label = r'$\mathbf{C}, \mathbf{Q}_{\phi}$'
+		elif method.startswith('ARAAR'):
+			color, style = 'goldenrod', 'dashed'
+			label = r'$\mathbf{C}, \operatorname{np2}^{\circ}(\mathbf{Q}_\text{H})$'
 
 
 		avgs[method] = {
 			'PSNR': avg_psnr / n_images,
 			'SSIM': avg_ssim / n_images,
 			'BPP': avg_bpp / n_images,
+			'Method': method,
 			'Label': label,
 			'Color': color,
 			'Style': style
@@ -95,39 +99,48 @@ plt.rcParams['text.latex.preamble'] = r'\usepackage{amsmath, amssymb, bm}'
 plt.rcParams['font.family'] = 'Times New Roman'
 plt.rcParams['font.size'] = 8
 plt.rcParams['text.usetex'] = True
-plt.rcParams["figure.figsize"] = (3, 2)
+#plt.rcParams["figure.figsize"] = (3, 2)
 
-handles_upper, labels_upper = [], []
-handles_middle, labels_middle = [], []
+fig, axes = plt.subplots(1, 2, figsize=(8,2))  # 1 linha, 2 colunas
+# Listas para armazenar linhas e rótulos
+handles, labels = [], []
 
 # Plot WS-PSNR
 for avg in sorted_avgs:
-	plt.plot(avg['BPP'], avg['PSNR'], marker='.', color=avg['Color'], 
-			ls=avg['Style'], label=avg['Label'], linewidth=1)
-plt.xlabel('Bitrate (bpp)')
-plt.ylabel('PSNR (dB)')
-plt.xlim(0, max_bpp)
-plt.ylim(0, max_psnr+25)
-plt.legend(frameon=False, ncols=1, loc='upper left')
-plt.savefig(destination + 'bastos_PSNR_' + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
-#plt.show()
-plt.clf()
-plt.cla()
-
+    if 'DE_SIMONE' in avg['Method']:
+        continue
+    line, = axes[0].plot(avg['BPP'], avg['PSNR'], marker='.', color=avg['Color'], 
+                         ls=avg['Style'], label=avg['Label'], linewidth=1)
+    handles.append(line)
+    labels.append(avg['Label'])
+axes[0].set_xlabel('Bitrate (bpp)')
+axes[0].set_ylabel('PSNR (dB)')
+#axes[0].set_xlim(0, 6.5)
+axes[0].set_ylim(5, 50)
 
 # Plot WS-SSIM
 for avg in sorted_avgs:
-	plt.plot(avg['BPP'], avg['SSIM'], marker='.', color=avg['Color'], 
-			ls=avg['Style'], label=avg['Label'], linewidth=1)
-plt.xlabel('Bitrate (bpp)')
-plt.ylabel('SSIM')
-plt.xlim(0, max_bpp)
-plt.ylim(0, 1+0.03)
-plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(0.2))
-plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1f'))
-#plt.legend(frameon=False, ncols=1, bbox_to_anchor=(0.45, 0.4))
-plt.legend(frameon=False, ncols=1, loc='lower right', markerfirst=False)
-plt.savefig(destination + 'bastos_SSIM_'  + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
+    if 'DE_SIMONE' in avg['Method']:
+        continue
+    line, = axes[1].plot(avg['BPP'], avg['SSIM'], marker='.', color=avg['Color'], 
+                         ls=avg['Style'], label=avg['Label'], linewidth=1)
+    handles.append(line)
+    labels.append(avg['Label'])
+axes[1].set_xlabel('Bitrate (bpp)')
+axes[1].set_ylabel('SSIM')
+#axes[1].set_xlim(0, 6.5)
+axes[1].set_ylim(0.4, 1)
+axes[1].yaxis.set_major_locator(ticker.MultipleLocator(0.1))
+axes[1].yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1f'))
+
+# Filtrar duplicatas para a legenda
+unique = {label: handle for handle, label in zip(handles, labels)}
+handles, labels = list(unique.values()), list(unique.keys())
+
+# Adicionar legenda compartilhada
+fig.legend(handles, labels, loc='upper center', ncol=5, frameon=False, bbox_to_anchor=(0.5, 1.055))
+# Salvar a figura
+plt.savefig(destination + 'bastos_PSNR-SSIM_' + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
 #plt.show()
 
 

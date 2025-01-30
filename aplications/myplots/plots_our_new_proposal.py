@@ -95,37 +95,46 @@ plt.rcParams['text.latex.preamble'] = r'\usepackage{amsmath, amssymb, bm}'
 plt.rcParams['font.family'] = 'Times New Roman'
 plt.rcParams['font.size'] = 8
 plt.rcParams['text.usetex'] = True
-plt.rcParams["figure.figsize"] = (3, 2)
+#plt.rcParams["figure.figsize"] = (3, 2)
+
+fig, axes = plt.subplots(1, 2, figsize=(8,2))  # 1 linha, 2 colunas
+# Listas para armazenar linhas e rótulos
+handles, labels = [], []
 
 # Plot WS-PSNR
 for avg in sorted_avgs:
-	if 'JPEG' in avg['Method'] or 'P4' in avg['Method']: continue
-	plt.plot(avg['BPP'], avg['PSNR'], marker='.', color=avg['Color'], 
-			ls=avg['Style'], label=avg['Label'], linewidth=1)
-plt.xlabel('Bitrate (bpp)')
-plt.ylabel('WS-PSNR (dB)')
-plt.xlim(0, 3)
-plt.ylim(25, 55)
-plt.legend(frameon=False, ncols=1, loc='upper right', markerfirst=False)
-plt.savefig(destination + 'bastos_Ws-PSNR_' + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
-#plt.show()
-plt.clf()
-plt.cla()
-
+    if 'JPEG' in avg['Method'] or 'P4' in avg['Method']:
+        continue
+    line, = axes[0].plot(avg['BPP'], avg['PSNR'], marker='.', color=avg['Color'], 
+                         ls=avg['Style'], label=avg['Label'], linewidth=1)
+    handles.append(line)
+    labels.append(avg['Label'])
+axes[0].set_xlabel('Bitrate (bpp)')
+axes[0].set_ylabel('WS-PSNR (dB)')
+#axes[0].set_xlim(0, 3)
+#axes[0].set_ylim(25, 50)
 
 # Plot WS-SSIM
 for avg in sorted_avgs:
-	if 'JPEG' in avg['Method'] or 'P4' in avg['Method']: continue
-	plt.plot(avg['BPP'], avg['SSIM'], marker='.', color=avg['Color'], 
-			ls=avg['Style'], label=avg['Label'], linewidth=1)
-plt.xlabel('Bitrate (bpp)')
-plt.ylabel('WS-SSIM')
-plt.xlim(0, 3)
-plt.ylim(0.7, 1)
-plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(0.1))
-plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1f'))
-#plt.legend(frameon=False, ncols=1, bbox_to_anchor=(0.45, 0.4))
-plt.legend(frameon=False, ncols=1, loc='lower right', markerfirst=False)
-plt.savefig(destination + 'bastos_WS-SSIM_'  + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
-#plt.show()
+    if 'JPEG' in avg['Method'] or 'P4' in avg['Method']:
+        continue
+    line, = axes[1].plot(avg['BPP'], avg['SSIM'], marker='.', color=avg['Color'], 
+                         ls=avg['Style'], label=avg['Label'], linewidth=1)
+    handles.append(line)
+    labels.append(avg['Label'])
+axes[1].set_xlabel('Bitrate (bpp)')
+axes[1].set_ylabel('WS-SSIM')
+#axes[1].set_xlim(0, 3)
+#axes[1].set_ylim(0.7, 1)
+axes[1].yaxis.set_major_locator(ticker.MultipleLocator(0.1))
+axes[1].yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1f'))
 
+# Filtrar duplicatas para a legenda
+unique = {label: handle for handle, label in zip(handles, labels)}
+handles, labels = list(unique.values()), list(unique.keys())
+
+# Adicionar legenda compartilhada
+fig.legend(handles, labels, loc='upper center', ncol=4, frameon=False, bbox_to_anchor=(0.5, 1.055))
+# Salvar a figura
+plt.savefig(destination + 'bastos_WS-PSNR-SSIM_' + target_file.split(".")[0] + '.pdf', bbox_inches='tight', pad_inches=0)
+#plt.show()
