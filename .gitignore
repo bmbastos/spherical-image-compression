@@ -1,10 +1,8 @@
 images_for_tests/
-myenv/
 *HelpingCodes/
 *__pycache__/
-*.md
+myenv/
+*.xdot
 *.csv
 *.pdf
 *.png
-*.xdot
-*.txt
