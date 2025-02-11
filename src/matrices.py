@@ -1,9 +1,4 @@
-from skimage.metrics import peak_signal_noise_ratio, structural_similarity
-from skimage.io import imread
-import matplotlib.pyplot as plt
 import numpy as np
-import math
-import os
 
 A_ = np.array([[127, 123, 125, 120, 126, 123, 127, 128,],
 			[142, 135, 144, 143, 140, 145, 142, 140,],
@@ -76,71 +71,3 @@ QHVS = np.array([[16, 16, 16, 16, 17, 18, 21, 24],
 					[21, 22, 25, 31, 41, 54, 70, 88],
 					[24, 25, 29, 36, 47, 65, 88, 115]], dtype=float)
 """ Quantization matrix proposed by Araar and Chabbi (2023) """
-
-class Image:
-	def __init__(self, image_path:str):
-		""" Load image from file """
-		if not image_path.exists() or not image_path.is_file():
-			raise ValueError(f"The flie {image_path} does not exist or is not a valid file.")
-		
-		self.data = imread(image_path, as_gray=True).astype(float)
-		self.shape = self.data.shape
-		self.title = image_path.split('/')[-1]
-
-	def get_image(self):
-		""" Return image data """
-		return self.data
-	
-	def get_shape(self):
-		""" Return image shape """
-		return self.shape
-	
-	def set_title(self, title:str):
-		""" Set image title """
-		while not title.endswith('.jpeg'):
-			title = input("Please, enter a valid title for the image (e.g. 'image.jpeg'): ")
-			if title in os.listdir('./output'):
-				change = input("The file already exists. Do you want to replace it? (y/n): ")
-				if change == 'y':
-					break					
-		self.title = title
-	
-	def show(self):
-		""" Show image """
-		plt.imshow(self.data, cmap='gray')
-		plt.show()
-
-	def save(self):
-		""" Save image """
-		plt.imsave('./output' + self.title  , self.data, cmap='gray')
-
-class Compressor:
-	def __init__(self, image:np.array, block_size=8, transformation_matrix=TR, quantization_matrix=Q0, quantization_factor=50, np2='Round'):
-		""" Compress image """
-		self.image = image
-
-		def umount(data, newdimension=(8, 8)):
-			if len(newdimension) == 1:
-				n = newdimension[0]
-				return [data[i:i + n] for i in range(0, len(data), n)]
-			elif len(newdimension) == 2:
-				nrows, ncols = newdimension
-				h, w = data.shape
-				if h % nrows != 0 or w % ncols != 0:
-					raise ValueError(f"The matrix ({h}x{w}) cannot be divided exactly into blocks of {nrows}x{ncols}")
-				return (data.reshape(h//nrows, nrows, -1, ncols).swapaxes(1,2).reshape(-1, nrows, ncols))
-		
-		def direct_transform(self, block_size, transformation_matrix):
-			""" 2D DCT """
-			return np.einsum('mij, jk -> mik', np.einsum('ij, mjk -> mik', transformation_matrix, umount(self.image, (block_size, block_size))), transformation_matrix.T)
-		
-		def quantize(self, )
-
-		
-			
-
-
-
-
-
-# Auxiliary functions

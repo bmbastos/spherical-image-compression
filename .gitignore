@@ -2,6 +2,8 @@ images_for_tests/
 *HelpingCodes/
 *__pycache__/
 myenv/
+*.venv/
+*venv/
 *.xdot
 *.csv
 *.pdf
