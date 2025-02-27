@@ -65,6 +65,9 @@ To set up the development environment, follow the steps below according to your 
 There is a image in `input_images/` that can be used to run the main script:
 ```bash
 python main.py		# On Windows
+```
+Or
+```bash
 python3 main.py 	# On Linux/macOS
 ```
 
