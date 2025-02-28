@@ -2,7 +2,8 @@ from src.compressor import Compressor
 from skimage.io import imread
 from matplotlib import pyplot as plt
 
-compressor = Compressor(imread('input_images/AerialCity_3840x1920_30fps_8bit_420_erp_0.bmp', as_gray=True).astype(float))			
+target_file = 'spherical_image_sample.bmp'
+compressor = Compressor(imread('input_images/' + target_file, as_gray=True).astype(float))			
 
 print(f"The image will be compressed by a quality factor of {compressor.get_quantization_factor()}."); print()
 # Change the quality factor
@@ -19,6 +20,9 @@ print(compressor.get_quantization_matrix()); print()
 original_image = compressor.get_image()
 compressor.lower_complexity(); print()
 reconstructed_image = compressor.get_image()
+
+# If you wat to save the image
+#plt.imsave('output_images/' + target_file.split(".")[0] + '.jpg', reconstructed_image, cmap='gray')
 
 fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 axes[0].imshow(original_image, cmap='gray')

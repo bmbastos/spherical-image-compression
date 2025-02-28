@@ -3,26 +3,21 @@
 This project showcases the spherical image compressor developed for the article "Low-Complexity Compression for 360° Still Images", published in LASCAS 2025 (DOI:_). A more detailed version is available in my [undergraduate thesis](https://lume.ufrgs.br/handle/10183/284279) in Computer Science at the Federal University of Rio Grande do Sul.
 
 ## 📁 Project Structure 
-	 image_compressor/  
-	│── input_images/         	# Folder to store input images  
-	│── output_images/        	# Folder to store compressed images  
-	│── src/                  	# Main source code of the project  
-	│   ├── __init__.py       	# Indicates that src is a Python module  
-	│   ├── compressor.py     	# Main image compression class  
-	│   ├── image_loader.py   	# Class for loading images  
-	│   ├── image_writer.py   	# Class for saving images  
-	│   ├── utils.py          	# Auxiliary functions  
-	│── tests/                	# Unit tests  
-	│   ├── __init__.py       
-	│   ├── test_compressor.py  
-	│── docs/                 	# Project documentation  
-	│── examples/             	# Usage examples  
-	│── .gitignore            	# Files to be ignored by Git  
-	│── requirements.txt      	# Project dependencies  
-	│── setup.bat			  	# Script to set up the environment (Windows) 
-	│── setup.sh			  	# Script to set up the environment (Linux/Mac)  
-	│── README.md             	# Project information  
-	│── main.py              	# Project entry point 
+	image_compressor/
+	│── input_images/			# Folder to store input images  
+	│── src/					# Main source code of the project
+	│   ├── compressor.py		# Main image compression class  
+	│   ├── image_loader.py		# Class for loading images  
+	│   ├── image_writer.py		# Class for saving images  
+	│   ├── utils.py			# Auxiliary functions  
+	│── tests/					# Unit tests
+	│── docs/					# Project documentation
+	│── .gitignore				# Files to be ignored by Git  
+	│── requirements.txt		# Project dependencies  
+	│── setup.bat				# Script to set up the environment (Windows) 
+	│── setup.sh				# Script to set up the environment (Linux/Mac)  
+	│── README.md				# Project information  
+	│── main.py					# Project entry point 
 
 ## ⚙️ Environment Setup
 
