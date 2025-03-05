@@ -1,6 +1,6 @@
 # Low-Complexity Compressor for 360° Images
 
-This project showcases the spherical image compressor developed for the article "Low-Complexity Compression for 360° Still Images", published in LASCAS 2025 (DOI:_). A more detailed version is available in my [undergraduate thesis](https://lume.ufrgs.br/handle/10183/284279) in Computer Science at the Federal University of Rio Grande do Sul.
+This project showcases the spherical image compressor developed for the article "Low-Complexity Compression for 360° Still Images", published in LASCAS 2025 (DOI:_). A more detailed version is available in my undergraduate thesis in Computer Science at the Federal University of Rio Grande do Sul, called ["Low-complexity transform-quantization pair for 360° image compression"](https://lume.ufrgs.br/handle/10183/284279).
 
 ## 📁 Project Structure 
 	image_compressor/
@@ -67,4 +67,9 @@ python3 main.py 	# On Linux/macOS
 ```
 
 ## 📜 License
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache 2.0 License. See the [LICENSE](LICENSE) file for details.
+
+## Cite this work
+If this code is useful for your research, please cite:
+
+> Bastos, Bruno M., Segala, E. B., and Silveira, T. L. T, "Low-complexity transform-quantization pair for 360° image compression", 2025. [https://lume.ufrgs.br/handle/10183/284279]

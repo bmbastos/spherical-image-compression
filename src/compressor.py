@@ -1,26 +1,22 @@
 from src.matrices import *
 from scipy import signal
 import numpy as np
+from pdb import set_trace as pause
 
 class Compressor:
-		
-	wspnr = None
-	wssim = None
-	bpp = None
 	
 	def __init__(self, image:np.ndarray=None, block_size:int=8, transformation_matrix:np.ndarray=TR, quantization_matrix:np.ndarray=Q0, quantization_factor:int=50, np2:str='Round'):
-		""" Compress image """
+		""" Process image """
 		self.image = image
 		if image is None:
 			raise ValueError("Image is required")
-		if image.max() <= 1:
-			self.image = np.around(255*image)
 		self.block_size = block_size
 		self.quantization_factor = quantization_factor
 		self.transformation_matrix = transformation_matrix
 		self.quantization_matrix = quantization_matrix
 		self.dequantization_matrix = quantization_matrix			
 		self.np2 = np2
+		self.bpp = None
 		
 	# Getters and Setters
 	def get_image(self):
@@ -44,12 +40,6 @@ class Compressor:
 	def get_np2(self):
 		return self.np2
 	
-	def get_wpsnr(self):
-		return self.wpsnr
-	
-	def get_wssim(self):
-		return self.wssim
-	
 	def get_bpp(self):
 		return self.bpp
 	
@@ -69,10 +59,22 @@ class Compressor:
 		self.dequantization_matrix = dequantization_matrix
 
 	def set_quantization_factor(self, quantization_factor:int):
+		if quantization_factor < 1 or quantization_factor > 100:
+			raise ValueError("Invalid quantization factor")
 		self.quantization_factor = quantization_factor
 
 	def set_np2(self, np2:str):
+		if np2 not in ['Round', 'Ceil', 'Floor']:
+			raise ValueError("Invalid np2 value")
 		self.np2 = np2
+
+	
+	@staticmethod
+	def process_image(image:np.ndarray):
+		""" Process image """
+		if image.max() <= 1:
+			image = np.around(255*image)
+		return image
 
 	@staticmethod
 	def umount(image_data:np.ndarray, block_size:int=8):
@@ -112,7 +114,7 @@ class Compressor:
 		aux_max_LUT = [np.finfo('f').min for x in k_LUT]
 		for idx in range(len(ks)):
 			for idx2 in range(len(k_LUT)):
-				if sum(ks[idx] - k_LUT[idx2]) == 0:
+				if np.sum(ks[idx] - k_LUT[idx2]) == 0:
 					if els[idx] > aux_max_LUT[idx2]: 
 						aux_max_LUT[idx2] = els[idx]
 					if els[idx] < min_LUT[idx2]: 
@@ -151,6 +153,8 @@ class Compressor:
 		adjustment_matrix = np.matrix(np.sqrt(np.linalg.inv(np.dot(self.transformation_matrix, self.transformation_matrix.T)))) 
 		adjustment_vector = np.matrix(np.diag(adjustment_matrix))
 		Z = np.dot(adjustment_vector.T, adjustment_vector)
+		if len(self.quantization_matrix.shape) == 3:
+			Z = np.tile(np.asarray([Z]), (self.image.shape[0], 1, 1))
 		self.quantization_matrix = np.divide(self.quantization_matrix, Z)
 		self.dequantization_matrix =  np.multiply(self.dequantization_matrix,  Z)
 	
@@ -202,20 +206,26 @@ class Compressor:
 
 	def __calculate_bpp(self):
 		""" Calculate bits per pixel """
+		print("Calculating BPP...")
 		self.bpp = np.count_nonzero(np.logical_not(np.isclose(self.image, 0))) * 8 / (self.image.shape[0] * self.image.shape[1])
 
-	def __calculate_wpsnr(self, original_image:np.ndarray, max_value:int=255):
+	@staticmethod
+	def calculate_wpsnr(original_image:np.ndarray, target_image:np.ndarray, max_value:int=255):
 		""" Calculate Weighted-to-Spherically-Uniform PSNR """
 		def __weights(height, width):
 			phis = np.arange(height+1) * np.pi / height
 			deltaTheta = 2 * np.pi / width 
 			column = np.asarray([deltaTheta * (-np.cos(phis[j+1])+np.cos(phis[j])) for j in range(height)])
 			return np.repeat(column[:, np.newaxis], width, 1)
-		w = __weights(original_image.shape[0], original_image.shape[1])
-		wmse = np.sum((original_image - self.image)**2 * w) / (4 * np.pi)
-		self.wpsnr = 10 * np.log10(max_value**2 / wmse)
+		
+		print("Calculating WS-PSNR...")
 
-	def __calculate_wssim(self, original_image:np.ndarray, K1:float=0.01, K2:float=0.03, L:int=255):
+		w = __weights(original_image.shape[0], original_image.shape[1])
+		wmse = np.sum((original_image - target_image)**2 * w) / (4 * np.pi)
+		return float(10 * np.log10(max_value**2 / wmse))
+
+	@staticmethod
+	def calculate_wssim(original_image:np.ndarray, target_image:np.ndarray, K1:float=0.01, K2:float=0.03, L:int=255):
 		""" Calculate Weighted-to-Spherically-Uniform SSIM """
 		def __fspecial_gauss(size:int, sigma:float):
 			""" Function to mimic fspecial('gaussian',...) from MATLAB """
@@ -228,6 +238,11 @@ class Compressor:
 			column = np.asarray([np.cos( deltaTheta * (j - height/2.+0.5)) for j in range(height)])
 			return np.repeat(column[:, np.newaxis], width, 1)
 		
+		print("Calculating WS-SSIM...")
+		
+		original_image = np.float64(original_image)
+		target_image = np.float64(target_image)
+
 		k = 11
 		sigma = 1.5
 		window = __fspecial_gauss(k, sigma)
@@ -236,27 +251,26 @@ class Compressor:
 		C1 = (K1 * L)**2
 		C2 = (K2 * L)**2
 
-		mu1 = signal.convolve2d(original_image.astype(float), window, 'valid')
-		mu2 = signal.convolve2d(self.image.astype(float), window, 'valid')
+		mu1 = signal.convolve2d(original_image, window, 'valid')
+		mu2 = signal.convolve2d(target_image, window, 'valid')
 
-		mu1_sq = mu1 * mu1
-		mu2_sq = mu2 * mu2
-		mu1_mu2 = mu1 * mu2
+		mu1_sq = mu1*mu1
+		mu2_sq = mu2*mu2
+		mu1_mu2 = mu1*mu2
 
-		sigma1_sq = signal.convolve2d(original_image.astype(float)*original_image.astype(float), window, 'valid') - mu1_sq
-		sigma2_sq = signal.convolve2d(self.image.astype(float)*self.image.astype(float), window, 'valid') - mu2_sq
-		sigma12 = signal.convolve2d(original_image.astype(float)*self.image.astype(float), window, 'valid') - mu1_mu2
+		sigma1_sq = signal.convolve2d(original_image*original_image, window, 'valid') - mu1_sq
+		sigma2_sq = signal.convolve2d(target_image*target_image, window, 'valid') - mu2_sq
+		sigma12 = signal.convolve2d(original_image*target_image, window, 'valid') - mu1_mu2
 
-		W = __weights(*original_image.astype(float).shape)
+		W = __weights(*original_image.shape)
 		Wi = signal.convolve2d(W, window2, 'valid')
 
 		ssim_map = ((2*mu1_mu2 + C1)*(2*sigma12 + C2))/((mu1_sq + mu2_sq + C1)*(sigma1_sq + sigma2_sq + C2)) * Wi
-		self.wsmssim = sum(ssim_map)/sum(Wi)
+		return np.sum(ssim_map)/np.sum(Wi)
 
-	
-	def lower_complexity(self):
+
+	def lower_complexity(self, original_image:np.ndarray):
 		""" The base proposal of our algorithm.  """
-		original_image = self.image
 		
 		print("Compressing image...")
 		self.image = Compressor.umount(self.image, self.block_size)
@@ -268,14 +282,50 @@ class Compressor:
 		self.__quantize()
 
 		self.compressed_image = np.clip(Compressor.remount(self.image, (original_image.shape[0], original_image.shape[1])), 0, 255)
-		self.bpp = self.__calculate_bpp()
+		self.__calculate_bpp()
 
 		self.__dequantize()
 		self.__inverse_transform()
 		self.image = np.clip(Compressor.remount(self.image, (original_image.shape[0], original_image.shape[1])), 0, 255)
-
-		self.__calculate_wpsnr(original_image)
-		self.__calculate_wssim(original_image)
-
 		print("Image compressed successfully")
 
+	def lower_complexity_2(self, original_image:np.ndarray):
+		""" The proposal equivalent to lower_complexity. """
+		
+		print("Compressing image...")
+		self.image = Compressor.umount(self.image, self.block_size)
+		self.__direct_transform()
+		self.__compute_quantization_dequantization_matrices()
+		self.__scale_quantization()
+		self.__prepareQPhi(original_image.shape)	# The only difference is that we use QPhi first, then we apply the np2_round
+		self.__np2_round()
+		self.__quantize()
+
+		self.compressed_image = np.clip(Compressor.remount(self.image, (original_image.shape[0], original_image.shape[1])), 0, 255)
+		self.__calculate_bpp()
+
+		self.__dequantize()
+		self.__inverse_transform()
+		self.image = np.clip(Compressor.remount(self.image, (original_image.shape[0], original_image.shape[1])), 0, 255)
+		print("Image compressed successfully")
+
+	
+	def matematically_correct(self, original_image:np.ndarray):
+		""" The proposal that obtains the bests results, but isn't the most efficient. """
+
+		print("Compressing image...")
+		self.image = Compressor.umount(self.image, self.block_size)
+		self.__direct_transform()
+		self.__scale_quantization()
+		self.__prepareQPhi(original_image.shape)
+		self.__compute_quantization_dequantization_matrices()
+		self.__np2_round()
+		self.__quantize()
+
+		self.compressed_image = np.clip(Compressor.remount(self.image, (original_image.shape[0], original_image.shape[1])), 0, 255)
+		self.__calculate_bpp()
+
+		self.__dequantize()
+		self.__inverse_transform()
+		self.image = np.clip(Compressor.remount(self.image, (original_image.shape[0], original_image.shape[1])), 0, 255)
+		print("Image compressed successfully")
