@@ -1,3 +1,4 @@
+*.gitignore
 images_for_tests/
 *HelpingCodes/
 *__pycache__/

@@ -1,4 +1,5 @@
 from src.compressor import Compressor
+from src.matrices import *
 from skimage.io import imread
 from matplotlib import pyplot as plt
 from pdb import set_trace as pause

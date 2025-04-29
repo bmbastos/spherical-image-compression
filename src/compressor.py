@@ -6,7 +6,7 @@ from pdb import set_trace as pause
 class Compressor:
 	
 	def __init__(self, image:np.ndarray=None, block_size:int=8, transformation_matrix:np.ndarray=TR, quantization_matrix:np.ndarray=Q0, quantization_factor:int=50, np2:str='Round'):
-		""" Process image """
+		""" Initializer  """
 		self.image = image
 		if image is None:
 			raise ValueError("Image is required")
@@ -68,6 +68,23 @@ class Compressor:
 			raise ValueError("Invalid np2 value")
 		self.np2 = np2
 
+	@staticmethod
+	def calculate_matrix_of_transformation(k:int) -> np.ndarray:
+		""" Calculate the transformation matrix of JPEG with size k """
+		row = 0
+		alpha = 0.0
+		transformation_matrix = np.zeros((k, k), np.float64)
+		while(row < k):								
+			if row == 0:
+				alpha = 1 / (k ** 0.5)
+			else:
+				alpha = (2 / k) ** 0.5
+			col = 0
+			while(col < k):
+				transformation_matrix[row][col] = alpha * np.cos((np.pi * row * (2 * col + 1)) / (2 * k))
+				col += 1
+			row += 1
+		return transformation_matrix
 	
 	@staticmethod
 	def process_image(image:np.ndarray):
@@ -80,7 +97,7 @@ class Compressor:
 	def umount(image_data:np.ndarray, block_size:int=8):
 		""" Unmounts a matrix into blocks  """
 		nrows, ncols = block_size, block_size
-		h, w= image_data.shape
+		h, w= image_data.shape 
 		if h % nrows != 0 or w % ncols != 0:
 			raise ValueError(f"The matrix ({h}x{w}) cannot be divided exactly into blocks of {nrows}x{ncols}")
 		return image_data.reshape(h//nrows, nrows, -1, ncols).swapaxes(1,2).reshape(-1, nrows, ncols)
@@ -147,6 +164,7 @@ class Compressor:
 		""" Adjust quantization matrix by a scalar factor """
 		s = 5000.0 / self.quantization_factor if self.quantization_factor < 50 else 200.0 - 2.0 * self.quantization_factor
 		self.quantization_matrix = np.floor((s * self.quantization_matrix + 50) / 100)
+		self.dequantization_matrix = self.quantization_matrix
 	
 	def __compute_quantization_dequantization_matrices(self) -> tuple[np.matrix, np.matrix]:
 		""" Compute quantization and dequantization matrices through the transformation matrix """
@@ -155,8 +173,9 @@ class Compressor:
 		Z = np.dot(adjustment_vector.T, adjustment_vector)
 		if len(self.quantization_matrix.shape) == 3:
 			Z = np.tile(np.asarray([Z]), (self.image.shape[0], 1, 1))
-		self.quantization_matrix = np.divide(self.quantization_matrix, Z)
-		self.dequantization_matrix =  np.multiply(self.dequantization_matrix,  Z)
+		self.quantization_matrix = np.array(np.divide(self.quantization_matrix, Z))
+		self.dequantization_matrix =  np.array(np.multiply(self.dequantization_matrix,  Z))
+		#self.dequantization_matrix =  np.array(np.multiply(Z, self.dequantization_matrix))
 	
 	def __prepareQPhi(self, original_image_shape:tuple):
 		""" Builds the Look-up-table of the image based on its height """
@@ -204,10 +223,10 @@ class Compressor:
 		self.quantization_matrix = np.power(2, np.floor(np.log2(self.quantization_matrix)))
 		self.dequantization_matrix = np.power(2, np.floor(np.log2(self.dequantization_matrix)))
 
-	def __calculate_bpp(self):
+	def calculate_bpp(compressed_image:np.ndarray):
 		""" Calculate bits per pixel """
 		print("Calculating BPP...")
-		self.bpp = np.count_nonzero(np.logical_not(np.isclose(self.image, 0))) * 8 / (self.image.shape[0] * self.image.shape[1])
+		return np.count_nonzero(np.logical_not(np.isclose(compressed_image, 0))) * 8 / (compressed_image.shape[0] * compressed_image.shape[1])
 
 	@staticmethod
 	def calculate_wpsnr(original_image:np.ndarray, target_image:np.ndarray, max_value:int=255):
@@ -266,7 +285,7 @@ class Compressor:
 		Wi = signal.convolve2d(W, window2, 'valid')
 
 		ssim_map = ((2*mu1_mu2 + C1)*(2*sigma12 + C2))/((mu1_sq + mu2_sq + C1)*(sigma1_sq + sigma2_sq + C2)) * Wi
-		return np.sum(ssim_map)/np.sum(Wi)
+		return float(np.sum(ssim_map)/np.sum(Wi))
 
 
 	def lower_complexity(self, original_image:np.ndarray):
@@ -275,19 +294,19 @@ class Compressor:
 		print("Compressing image...")
 		self.image = Compressor.umount(self.image, self.block_size)
 		self.__direct_transform()
-		self.__compute_quantization_dequantization_matrices()
 		self.__scale_quantization()
+		self.__compute_quantization_dequantization_matrices()
 		self.__np2_round()
 		self.__prepareQPhi(original_image.shape)
 		self.__quantize()
 
-		self.compressed_image = np.clip(Compressor.remount(self.image, (original_image.shape[0], original_image.shape[1])), 0, 255)
-		self.__calculate_bpp()
+		compressed_image = self.image.reshape(original_image.shape[0], original_image.shape[1])
 
 		self.__dequantize()
 		self.__inverse_transform()
 		self.image = np.clip(Compressor.remount(self.image, (original_image.shape[0], original_image.shape[1])), 0, 255)
 		print("Image compressed successfully")
+		return compressed_image
 
 	def lower_complexity_2(self, original_image:np.ndarray):
 		""" The proposal equivalent to lower_complexity. """
@@ -295,19 +314,19 @@ class Compressor:
 		print("Compressing image...")
 		self.image = Compressor.umount(self.image, self.block_size)
 		self.__direct_transform()
-		self.__compute_quantization_dequantization_matrices()
 		self.__scale_quantization()
+		self.__compute_quantization_dequantization_matrices()
 		self.__prepareQPhi(original_image.shape)	# The only difference is that we use QPhi first, then we apply the np2_round
 		self.__np2_round()
 		self.__quantize()
 
-		self.compressed_image = np.clip(Compressor.remount(self.image, (original_image.shape[0], original_image.shape[1])), 0, 255)
-		self.__calculate_bpp()
+		compressed_image = self.image.reshape(original_image.shape[0], original_image.shape[1])
 
 		self.__dequantize()
 		self.__inverse_transform()
 		self.image = np.clip(Compressor.remount(self.image, (original_image.shape[0], original_image.shape[1])), 0, 255)
 		print("Image compressed successfully")
+		return compressed_image
 
 	
 	def matematically_correct(self, original_image:np.ndarray):
@@ -322,10 +341,116 @@ class Compressor:
 		self.__np2_round()
 		self.__quantize()
 
-		self.compressed_image = np.clip(Compressor.remount(self.image, (original_image.shape[0], original_image.shape[1])), 0, 255)
-		self.__calculate_bpp()
+		compressed_image = self.image.reshape(original_image.shape[0], original_image.shape[1])
 
 		self.__dequantize()
 		self.__inverse_transform()
 		self.image = np.clip(Compressor.remount(self.image, (original_image.shape[0], original_image.shape[1])), 0, 255)
 		print("Image compressed successfully")
+		return compressed_image
+
+
+	def proposed_from_oliveira(self, original_image):
+		""" Original proposal from Oliveira (2016) """
+		self.set_transformation_matrix(TO)
+		print("Compressing image...")
+		self.image = Compressor.umount(self.image, self.block_size)
+		self.__direct_transform()
+		self.__scale_quantization()
+		self.__compute_quantization_dequantization_matrices()
+		self.__np2_round()
+		self.__quantize()
+
+		compressed_image = self.image.reshape(original_image.shape[0], original_image.shape[1])
+
+		self.__dequantize()
+		self.__inverse_transform()
+		self.image = np.clip(Compressor.remount(self.image, (original_image.shape[0], original_image.shape[1])), 0, 255)
+		print("Image compressed successfully")
+		return compressed_image
+
+
+	def proposed_from_brahimi(self, original_image):
+		""" Original proposal from Brahimi (2021) """
+		self.set_transformation_matrix(TB)
+		self.set_quantization_matrix(QB)
+		self.set_dequantization_matrix(QB)
+		print("Compressing image...")
+		self.image = Compressor.umount(self.image, self.block_size)
+		self.__direct_transform()
+		self.__scale_quantization()
+		self.__compute_quantization_dequantization_matrices()
+		#if self.quantization_factor > 50 and self.quantization_factor < 65: pause()
+		self.__np2_ceil()
+		#if self.quantization_factor > 50 and self.quantization_factor < 65: pause()
+		self.__quantize()
+
+		compressed_image = self.image.reshape(original_image.shape[0], original_image.shape[1])
+
+		self.__dequantize()
+		print("Pós dequantize")
+		print(f"Max = {np.max(self.image)}")
+		print(f"Min = {np.min(self.image)}")
+		
+		self.__inverse_transform()
+		self.image = np.clip(Compressor.remount(self.image, (original_image.shape[0], original_image.shape[1])), 0, 255)
+		print("Image compressed successfully")
+		return compressed_image
+	
+
+	def proposed_from_raiza(self, original_image):
+		""" Original Proposed from Raiza (2018) """
+		self.set_transformation_matrix(TR)
+		print("Compressing image...")
+		self.image = Compressor.umount(self.image, self.block_size)
+		self.__direct_transform()
+		self.__scale_quantization()
+		self.__quantize()
+
+		compressed_image = self.image.reshape(original_image.shape[0], original_image.shape[1])
+
+		self.__dequantize()
+		self.__inverse_transform()
+		self.image = np.clip(Compressor.remount(self.image, (original_image.shape[0], original_image.shape[1])), 0, 255)
+		print("Image compressed successfully")
+		return compressed_image
+	
+
+	def proposed_from_araar(self, original_image):
+		""" Original Proposed from Araar (2022) """
+		self.set_transformation_matrix(Compressor.calculate_matrix_of_transformation(self.block_size))
+		self.set_quantization_matrix(QHVS)
+		self.set_dequantization_matrix(QHVS)
+		print("Compressing image...")
+		self.image = Compressor.umount(self.image, self.block_size)
+		self.__direct_transform()
+		self.__scale_quantization()
+		self.__compute_quantization_dequantization_matrices()
+		self.__np2_round()
+		self.__quantize()
+
+		compressed_image = self.image.reshape(original_image.shape[0], original_image.shape[1])
+
+		self.__dequantize()
+		self.__inverse_transform()
+		self.image = np.clip(Compressor.remount(self.image, (original_image.shape[0], original_image.shape[1])), 0, 255)
+		print("Image compressed successfully")
+		return compressed_image
+	
+	def proposed_from_simone(self, original_image):
+		""" Original Proposed from Simone (2016) """
+		self.set_transformation_matrix(Compressor.calculate_matrix_of_transformation(self.block_size))
+		print("Compressing image...")
+		self.image = Compressor.umount(self.image, self.block_size)
+		self.__direct_transform()
+		self.__scale_quantization()
+		self.__prepareQPhi(original_image.shape)
+		self.__quantize()
+
+		compressed_image = self.image.reshape(original_image.shape[0], original_image.shape[1])
+
+		self.__dequantize()
+		self.__inverse_transform()
+		self.image = np.clip(Compressor.remount(self.image, (original_image.shape[0], original_image.shape[1])), 0, 255)
+		print("Image compressed successfully")
+		return compressed_image
