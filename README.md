@@ -72,4 +72,6 @@ This project is licensed under the Apache 2.0 License. See the [LICENSE](LICENSE
 ## Cite this work
 If this code is useful for your research, please cite:
 
-> Bastos, Bruno M., Segala, E. B., and Silveira, T. L. T, "Low-complexity transform-quantization pair for 360° image compression", 2025. [https://lume.ufrgs.br/handle/10183/284279]
+> Bastos, Bruno M. "Low-complexity transform-quantization pair for 360° image compression", 2025. [https://lume.ufrgs.br/handle/10183/284279]
+
+> Bastos, Bruno M., Segala, E. B., and Silveira, T. L. T. "Low-Complexity Compression of 360° Still Images", 2025. [https://doi.org/10.1109/LASCAS64004.2025.10966281]
