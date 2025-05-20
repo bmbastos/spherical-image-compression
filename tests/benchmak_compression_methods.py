@@ -4,68 +4,73 @@ from skimage.io import imread
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from matplotlib import pyplot as plt
 from pdb import set_trace as pause
+from tqdm import tqdm
+import csv
 import os
 
 datas = dict()
 
+methods = ['JPEG', 'De Simone', 'Oliveira', 'Brahimi', 'Araar', 'Raiza', 'Lower Complexity 1', 'Lower Complexity 2', 'Mathematically Correct']
+
 files = os.listdir('input_images/') # Change the path to the input images folder
+quality_factors = list(range(5, 100, 5))
+
+# Número total de iterações
+total_steps = len(files) * len(methods) * len(quality_factors)
+progress_bar = tqdm(total=total_steps, desc="Compressing all images")
 
 for file in files:
-	if file.endswith('.bmp'): continue
-	print(file)
+	#print(file)
 	original_image = Compressor.process_image(imread('input_images/' + file, as_gray=True).astype(float))
-	ws_psnr, ws_ssim, bpp = [], [], []
 
-	for qf in range(5, 100, 5):
-		print('-- QF =', qf, '--')
-		compressor = Compressor(original_image)
-
-		compressor.set_quantization_factor(qf)
-		compressed_image = compressor.proposed_from_brahimi(original_image)
-		reconstructed_image = compressor.get_image()
-
-		#print(reconstructed_image)
-		#pause()
-
-		psnr_ = Compressor.calculate_wpsnr(original_image, reconstructed_image)
-		ssim_ = Compressor.calculate_wssim(original_image, reconstructed_image)
-		bpp_ = Compressor.calculate_bpp(compressed_image)
-
-		print(f'PSNR: {peak_signal_noise_ratio(original_image, reconstructed_image, data_range=255)}')
-		print(f'SSIM: {structural_similarity(original_image, reconstructed_image, data_range=255)}')
-		#ws_psnr.append(psnr_)
-		#ws_ssim.append(ssim_)
-		bpp.append(bpp_)
-
-		#print(f"WS-PSNR: {psnr_}")
-		#print(f"WS-SSIM: {ssim_}")
-		print(f"BPP: {bpp_}"); print()
-		"""
-		fig, axes = plt.subplots(3, 1, figsize=(10, 5))
-		axes[0].imshow(original_image, cmap='gray')
-		axes[0].set_title('Original Image')
-		axes[0].axis('off')
-
-		axes[1].imshow(compressed_image, cmap='gray')
-		axes[1].set_title(f'Compressed Image with QF = {qf}')
-		axes[1].axis('off')
-
-		axes[2].imshow(reconstructed_image, cmap='gray')
-		axes[2].set_title(f'Reconstructed Image with QF = {qf}')
-		axes[2].axis('off')
-
-		fig.tight_layout()
-		plt.show()
+	compressed_image = original_image.copy()
+	datas[file] = {}
+	for method in methods:
+		datas[file][method] = {}
+		for qf in range(5, 100, 5):
+			progress_bar.set_description(f"Processing {file} with {method} at QF {qf}")
+			datas[file][method][qf] = {}
+			compressor = Compressor(original_image)
+			compressor.set_quantization_factor(qf)
+			if method == 'JPEG': compressed_image = compressor.standard_jpeg(original_image)
+			elif method == 'De Simone': compressed_image = compressor.proposed_from_simone(original_image)
+			elif method == 'Oliveira': compressed_image = compressor.proposed_from_oliveira(original_image)
+			elif method == 'Brahimi': compressed_image = compressor.lower_complexity(original_image)
+			elif method == 'Araar': compressed_image = compressor.proposed_from_araar(original_image)
+			elif method == 'Raiza': compressed_image = compressor.proposed_from_raiza(original_image)
+			elif method == 'Lower Complexity 1': compressed_image = compressor.lower_complexity(original_image)
+			elif method == 'Lower Complexity 2': compressed_image = compressor.lower_complexity_2(original_image)
+			elif method == 'Mathematically Correct': compressed_image = compressor.matematically_correct(original_image)
 		
-	datas[file] = {'ws_psnr': ws_psnr, 'ws_ssim': ws_ssim, 'bpp': bpp}
+			reconstructed_image = compressor.get_image()
 
-plt.clf()
-plt.cla()
-plt.plot(datas['4.2.03.tiff']['bpp'] ,datas['4.2.03.tiff']['ws_psnr'], label='WS-PSNR')
-plt.show()
-plt.plot(datas['4.2.03.tiff']['bpp'] ,datas['4.2.03.tiff']['ws_ssim'], label='WS-SSIM')
-plt.show()
-pause()"""
+			psnr_ = Compressor.calculate_wpsnr(original_image, reconstructed_image)
+			ssim_ = Compressor.calculate_wssim(original_image, reconstructed_image)
+			bpp_ = Compressor.calculate_bpp(compressed_image)
+
+			datas[file][method][qf]['ws_psnr'] = psnr_
+			datas[file][method][qf]['ws_ssim'] = ssim_
+			datas[file][method][qf]['bpp'] = bpp_
+
+			progress_bar.update(1)
+
+destination = os.getcwd() + '/outputs/csv_files/'
+fieldnames = ['File', 'Method', 'Quality Factor', 'WS-PSNR', 'WS-SSIM', 'BPP']
+with open(destination + 'results.csv', 'w', newline='') as csvfile:
+	writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+	writer.writeheader()
+	for file in datas:
+		for method in datas[file]:
+			for qf in datas[file][method]:
+				writer.writerow({
+					'File': file,
+					'Method': method,
+					'Quality Factor': qf,
+					'WS-PSNR': datas[file][method][qf]['ws_psnr'],
+					'WS-SSIM': datas[file][method][qf]['ws_ssim'],
+					'BPP': datas[file][method][qf]['bpp']
+				})
+
 
 
 

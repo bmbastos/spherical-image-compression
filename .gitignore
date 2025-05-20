@@ -9,3 +9,4 @@ myenv/
 *.csv
 *.pdf
 *.png
+*to_clean/
