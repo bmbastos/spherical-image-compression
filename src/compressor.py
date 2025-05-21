@@ -286,7 +286,9 @@ class Compressor:
 
 	def lower_complexity(self, original_image:np.ndarray):
 		""" The base proposal of our algorithm.  """
-		#print("Compressing image...")
+		self.set_transformation_matrix(TR)
+		self.set_quantization_matrix(Q0)
+		self.set_dequantization_matrix(Q0)
 		self.image = Compressor.umount(self.image, self.block_size)
 		self.__direct_transform()
 		self.__scale_quantization()
@@ -305,8 +307,9 @@ class Compressor:
 
 	def lower_complexity_2(self, original_image:np.ndarray):
 		""" The proposal equivalent to lower_complexity. """
-		
-		#print("Compressing image...")
+		self.set_transformation_matrix(TR)
+		self.set_quantization_matrix(Q0)
+		self.set_dequantization_matrix(Q0)
 		self.image = Compressor.umount(self.image, self.block_size)
 		self.__direct_transform()
 		self.__scale_quantization()
@@ -326,8 +329,9 @@ class Compressor:
 	
 	def matematically_correct(self, original_image:np.ndarray):
 		""" The proposal that obtains the bests results, but isn't the most efficient. """
-
-		#print("Compressing image...")
+		self.set_transformation_matrix(TR)
+		self.set_quantization_matrix(Q0)
+		self.set_dequantization_matrix(Q0)
 		self.image = Compressor.umount(self.image, self.block_size)
 		self.__direct_transform()
 		self.__scale_quantization()

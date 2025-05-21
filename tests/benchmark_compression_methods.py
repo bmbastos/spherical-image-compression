@@ -35,7 +35,7 @@ for file in files:
 			if method == 'JPEG': compressed_image = compressor.standard_jpeg(original_image)
 			elif method == 'De Simone': compressed_image = compressor.proposed_from_simone(original_image)
 			elif method == 'Oliveira': compressed_image = compressor.proposed_from_oliveira(original_image)
-			elif method == 'Brahimi': compressed_image = compressor.lower_complexity(original_image)
+			elif method == 'Brahimi': compressed_image = compressor.proposed_from_brahimi(original_image)
 			elif method == 'Araar': compressed_image = compressor.proposed_from_araar(original_image)
 			elif method == 'Raiza': compressed_image = compressor.proposed_from_raiza(original_image)
 			elif method == 'Lower Complexity 1': compressed_image = compressor.lower_complexity(original_image)
@@ -56,7 +56,7 @@ for file in files:
 
 destination = os.getcwd() + '/outputs/csv_files/'
 fieldnames = ['File', 'Method', 'Quality Factor', 'WS-PSNR', 'WS-SSIM', 'BPP']
-with open(destination + 'results.csv', 'w', newline='') as csvfile:
+with open(destination + 'benchmark_results.csv', 'w', newline='') as csvfile:
 	writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 	writer.writeheader()
 	for file in datas:

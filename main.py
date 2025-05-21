@@ -21,8 +21,8 @@ print(f"Quantization matrix:")
 print(compressor.get_quantization_matrix()); print()
 # compressor.set_quantization_matrix('Set here') # Q0, QB, QHVS
 
-compressor.set_quantization_factor(5)
-compressed_image = compressor.proposed_from_araar(original_image); print()
+compressor.set_quantization_factor(25)
+compressed_image = compressor.lower_complexity(original_image); print()
 reconstructed_image = compressor.get_image()
 
 # If you wat to save the image
@@ -42,5 +42,5 @@ print(f"WS-SSIM of the compressed image: {Compressor.calculate_wssim(original_im
 print(f"BPP of the compressed image: {Compressor.calculate_bpp(compressed_image)}"); print()
 
 fig.tight_layout()
-#plt.show()
+plt.show()
 
