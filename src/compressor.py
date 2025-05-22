@@ -1,7 +1,6 @@
 from src.matrices import *
 from scipy import signal
 import numpy as np
-from pdb import set_trace as pause
 
 class Compressor:
 	

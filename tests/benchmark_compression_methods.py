@@ -1,9 +1,6 @@
 from src.compressor import Compressor
 from src.matrices import *
 from skimage.io import imread
-from skimage.metrics import peak_signal_noise_ratio, structural_similarity
-from matplotlib import pyplot as plt
-from pdb import set_trace as pause
 from tqdm import tqdm
 import csv
 import os

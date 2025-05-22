@@ -2,7 +2,6 @@ from src.compressor import Compressor
 from src.matrices import *
 from skimage.io import imread
 from matplotlib import pyplot as plt
-from pdb import set_trace as pause
 
 target_file = 'spherical_image_sample.bmp'
 original_image = Compressor.process_image(imread('input_images/' + target_file, as_gray=True).astype(float))
@@ -13,15 +12,6 @@ print(f"The image will be compressed by a quality factor of {compressor.get_quan
 # Change the quality factor
 # compressor.set_quantization_factor('Set here')
 
-print(f"Transformation matrix:")
-print(compressor.get_transformation_matrix()); print()
-# compressor.set_transformation_matrix('Set here') # TB, TO, TR
-
-print(f"Quantization matrix:")
-print(compressor.get_quantization_matrix()); print()
-# compressor.set_quantization_matrix('Set here') # Q0, QB, QHVS
-
-compressor.set_quantization_factor(25)
 compressed_image = compressor.lower_complexity(original_image); print()
 reconstructed_image = compressor.get_image()
 

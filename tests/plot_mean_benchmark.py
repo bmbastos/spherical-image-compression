@@ -1,8 +1,5 @@
-import csv
-from numpy import array, zeros, ceil
+
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-from pdb import set_trace as pause
 import pandas as pd
 
 data_file = pd.read_csv('./outputs/csv_files/benchmark_results.csv')
@@ -14,7 +11,6 @@ means_bpp = data_file.groupby(['Method', 'Quality Factor'])['BPP'].mean().reset_
 
 for method in methods:
 	psnr_values = means_psnr[means_psnr['Method'] == method]['WS-PSNR'].values
-	#ssim_values = means_ssim[means_ssim['Method'] == method]['WS-SSIM'].values
 	bpp_values = means_bpp[means_bpp['Method'] == method]['BPP'].values
 
 	# Plot PSNR
@@ -31,7 +27,6 @@ plt.cla()
 
 for method in methods:
 	ssim_values = means_ssim[means_ssim['Method'] == method]['WS-SSIM'].values
-	pause()
 	bpp_values = means_bpp[means_bpp['Method'] == method]['BPP'].values
 
 	# Plot SSIM
