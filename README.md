@@ -5,19 +5,19 @@ This project showcases the spherical image compressor developed for the article 
 ## 📁 Project Structure 
 	image_compressor/
 	│── input_images/			# Folder to store input images  
-	│── src/					# Main source code of the project
-	│   ├── compressor.py		# Main image compression class  
-	│   ├── image_loader.py		# Class for loading images  
-	│   ├── image_writer.py		# Class for saving images  
-	│   ├── utils.py			# Auxiliary functions  
-	│── tests/					# Unit tests
-	│── docs/					# Project documentation
+ 	│── outputs/				# Folder to store output files  
+  	│   ├── csv_files/
+   	│   ├── image_files/  
+	│── src/				# Main source code of the project
+	│   ├── compressor.py			# Main image compression class  
+	│   ├── matrices.py			# Main matrices used
+	│── tests/				# Unit tests
 	│── .gitignore				# Files to be ignored by Git  
-	│── requirements.txt		# Project dependencies  
+	│── requirements.txt			# Project dependencies  
 	│── setup.bat				# Script to set up the environment (Windows) 
 	│── setup.sh				# Script to set up the environment (Linux/Mac)  
 	│── README.md				# Project information  
-	│── main.py					# Project entry point 
+	│── main.py				# Project entry point 
 
 ## ⚙️ Environment Setup
 
